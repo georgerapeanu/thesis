@@ -44,8 +44,6 @@ class ModelConfig(TypedDict):
     vocab_size: int
     optimizer: Optimizers
     lr: int
-    batches_per_epoch: int
-    val_batches_per_epoch: int
     vocab_size: int
     eos_id: int
     bos_id: int

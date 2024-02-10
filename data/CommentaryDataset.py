@@ -10,33 +10,35 @@ import polars as pl
 from torch.nn.utils.rnn import pad_sequence
 from utils.configs import DataConfig
 import sentencepiece
+FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+INV_FILES = {'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, 'f': 5, 'g': 6, 'h': 7}
+ROWS = ['1', '2', '3', '4', '5', '6', '7', '8']
+INV_ROWS = {'1': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6, '8': 7}
+INV_PROMOTIONS = {'b': 0, 'r': 1, 'n': 2}
 class CommentaryDataset(Dataset):
     def __init__(self, config: DataConfig):
         self.__config = config
-        self.__deltas = CommentaryDataset.__all_move_deltas()
+        self.__deltas, self.__inv_deltas = CommentaryDataset.__all_move_deltas()
         self.__sp = sentencepiece.SentencePieceProcessor(model_file=self.__config['sentencepiece_path'])
 
-        self.__raw_data = []
+        self.__data = []
         for filename in os.listdir(os.path.join(self.__config['data_path'], self.__config['split'])):
-            try:
-                local_data = pl.read_parquet(os.path.join(self.__config['data_path'], self.__config['split'], filename)).rows()
-                past_boards = []
-                for row in local_data:
-                    past_boards.append((row[0], row[3]))
-                    current_board = (row[1], row[4])
-                    if len(row[2].strip()) == 0:
-                        continue
-                    tokens = [self.__sp.bos_id()] + self.__sp.encode(row[2].strip().replace('\n', '<n>')) + [self.__sp.eos_id()]
-                    if len(tokens) > config['context_length']:
-                        for i in range(0, len(tokens) - 1 - config['context_length'], config['stride_big_sequences']):
-                            self.__raw_data.append((past_boards[max(0, len(past_boards) - config['past_boards']):], current_board, tokens[i:i + config['context_length'] + 1]))
-                    else:
-                        self.__raw_data.append((past_boards[max(0, len(past_boards) - config['past_boards']):], current_board, tokens))
-            except Exception as e:
-                pass
+            local_data = pl.read_parquet(os.path.join(self.__config['data_path'], self.__config['split'], filename)).rows()
+            past_boards = []
+            for row in local_data:
+                past_boards.append((row[0], row[3]))
+                current_board = (row[1], row[4])
+                if len(row[2].strip()) == 0:
+                    continue
+                tokens = [self.__sp.bos_id()] + self.__sp.encode(row[2].strip().replace('\n', '<n>')) + [self.__sp.eos_id()]
+                if len(tokens) > config['context_length']:
+                    for i in range(0, len(tokens) - 1 - config['context_length'], config['stride_big_sequences']):
+                        self.__data.append(self.raw_data_to_data((past_boards[max(0, len(past_boards) - config['past_boards']):], current_board, tokens[i:i + config['context_length'] + 1])))
+                else:
+                    self.__data.append(self.raw_data_to_data((past_boards[max(0, len(past_boards) - config['past_boards']):], current_board, tokens)))
 
     @staticmethod
-    def __all_move_deltas() -> List[Tuple[int, int]]:
+    def __all_move_deltas() -> Tuple[List[Tuple[int, int]], Dict[Tuple[int, int], int]]:
         deltas = []
 
         # queen moves -> 56
@@ -52,27 +54,20 @@ class CommentaryDataset(Dataset):
             for dy in [-1, 1]:
                 for dx_mult, dy_mult in [(2, 1), (1, 2)]:
                     deltas.append((dx_mult * dx, dy_mult * dy))
-
-        cached_deltas = deltas
+        inv_deltas = {}
+        for i, d in enumerate(deltas):
+            inv_deltas[d] = i
         # 64 moves
-        return deltas
+        return deltas, inv_deltas
 
     def __get_positional_features(self, board: chess.Board, evaluation: int) -> torch.tensor:
-        layers = torch.zeros([207, 8, 8], dtype=torch.int32)
+        layers = torch.zeros([15, 8, 8], dtype=torch.int32)
 
         i = 0
         # P1 and P2 -> 12
         for color in [chess.WHITE, chess.BLACK]:
             for piece in [chess.PAWN, chess.ROOK, chess.KING, chess.BISHOP, chess.QUEEN, chess.KNIGHT]:
                 layers[i, :, :] = torch.tensor(board.pieces(piece, color).tolist(), dtype=torch.int32).reshape((8, 8))
-                i += 1
-
-        # attackers mask -> 192
-        for square in chess.SQUARES:
-            layers[i, :, :] = (torch.tensor(board.attacks(square).tolist(), dtype=torch.int32).reshape((8, 8)))
-            i += 1
-            for color in [chess.WHITE, chess.BLACK]:
-                layers[i, :, :] = (torch.tensor(board.pin(color, square).tolist(), dtype=torch.int32).reshape((8, 8)))
                 i += 1
 
         # checks -> 1
@@ -88,7 +83,7 @@ class CommentaryDataset(Dataset):
                 layers[i, :, :] = (torch.full((8, 8), count))
                 i += 1
                 break
-        # Total 207, shape 207 x 8 x 8
+        # Total 15, shape 15 x 8 x 8
         return layers
 
     def __get_state_features(self, board: chess.Board) -> torch.tensor:
@@ -109,77 +104,61 @@ class CommentaryDataset(Dataset):
         return layers
 
     def __get_all_move_features(self, board: chess.Board) -> torch.tensor:
-        FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
-        ROWS = ['1', '2', '3', '4', '5', '6', '7', '8']
-
         move_features = torch.zeros([73, 8, 8])
 
-        # moves - 64
-        for i, (dx, dy) in enumerate(self.__deltas):
-            for x in range(8):
-                for y in range(8):
-                    if x + dx < 0 or x + dx >= 8 or y + dy < 0 or y + dy >= 8:
-                        continue
-                    move = chess.Move.from_uci(FILES[x] + ROWS[y] + FILES[x + dx] + ROWS[y + dy])
-                    if not board.is_legal(move):
-                        move = chess.Move.from_uci(FILES[x] + ROWS[y] + FILES[x + dx] + ROWS[y + dy] + 'q')
-                    if not board.is_legal(move):
-                        continue
-                    move_features[i, x, y] = 1
+        for move in board.legal_moves:
+            str_move = str(move)
+            from_square = (INV_FILES[str_move[0]], INV_ROWS[str_move[1]])
+            to_square = (INV_FILES[str_move[2]], INV_ROWS[str_move[3]])
+            delta = (to_square[0] - from_square[0], to_square[1] - from_square[1])
+            promotion_type = None if len(str_move) == 4 else str_move[4]
 
-        i = len(self.__deltas)
-
-        # underpromotions -> 9
-        dy = (1 if board.turn == chess.WHITE else -1)
-        target_y = (6 if board.turn == chess.WHITE else 1)
-        for dx in [-1, 0, 1]:
-            for piece in ['r', 'b', 'n']:
-                for x in range(0, 8):
-                    for y in range(0, 8):
-                        if y != target_y:
-                            continue
-                        if x + dx < 0 or x + dx >= 8:
-                            continue
-                        move = chess.Move.from_uci(FILES[x] + ROWS[y] + FILES[x + dx] + ROWS[y + dy] + piece)
-                        if not board.is_legal(move):
-                            continue
-                        move_features[i, x, y] = 1
-                i += 1
+            if promotion_type is None or promotion_type == 'q':
+                index = self.__inv_deltas[delta]
+            else:
+                # doesn't distinguish between white and black promotions, maybe it's bad, not sure
+                index = len(self.__deltas) + INV_PROMOTIONS[promotion_type] * 3 + 1 + delta[0]
+            move_features[index, from_square[0], from_square[1]] = 1
 
         return move_features
 
     def __len__(self):
-        return len(self.__raw_data)
+        return len(self.__data)
 
-    def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor]:
-        POSITIONAL_SIZE = 207
+    def raw_data_to_data(self, raw_data):
+        POSITIONAL_SIZE = 15
         MOVE_SIZE = 73
         STATE_SIZE = 7
-        answer_board = torch.zeros([STATE_SIZE + POSITIONAL_SIZE * self.__config['past_boards'] + (POSITIONAL_SIZE + MOVE_SIZE), 8, 8], dtype=torch.int32)
+        answer_board = torch.zeros(
+            [STATE_SIZE + POSITIONAL_SIZE * self.__config['past_boards'] + (POSITIONAL_SIZE + MOVE_SIZE), 8, 8],
+            dtype=torch.int32)
 
-        current_board, current_eval = chess.Board(self.__raw_data[idx][1][0]), self.__raw_data[idx][1][1]
-        past_boards = [chess.Board(x[0]) for x in self.__raw_data[idx][0]]
-        past_evals = [x[1] for x in self.__raw_data[idx][0]]
+        current_board, current_eval = chess.Board(raw_data[1][0]), raw_data[1][1]
+        past_boards = [chess.Board(x[0]) for x in raw_data[0]]
+        past_evals = [x[1] for x in raw_data[0]]
         if current_board.turn == chess.BLACK:
             current_board = current_board.mirror()
             past_boards = [x.mirror() for x in past_boards]
             current_eval = -current_eval
             past_evals = [-x for x in past_evals]
 
-
         answer_board[-STATE_SIZE:, :, :] = self.__get_state_features(current_board)
         answer_board[-STATE_SIZE - MOVE_SIZE:-STATE_SIZE, :, :] = self.__get_all_move_features(current_board)
-        answer_board[-STATE_SIZE - POSITIONAL_SIZE - MOVE_SIZE:-STATE_SIZE - MOVE_SIZE, :, :] = self.__get_positional_features(current_board, current_eval)
+        answer_board[-STATE_SIZE - POSITIONAL_SIZE - MOVE_SIZE:-STATE_SIZE - MOVE_SIZE, :,
+        :] = self.__get_positional_features(current_board, current_eval)
         for i in range(0, len(past_boards)):
             answer_board[
-                -STATE_SIZE - (i + 2) * POSITIONAL_SIZE - MOVE_SIZE:-STATE_SIZE - (i + 1) * POSITIONAL_SIZE - MOVE_SIZE,
-                :,
-                :
+            -STATE_SIZE - (i + 2) * POSITIONAL_SIZE - MOVE_SIZE:-STATE_SIZE - (i + 1) * POSITIONAL_SIZE - MOVE_SIZE,
+            :,
+            :
             ] = (
                 self.__get_positional_features(past_boards[-i], past_evals[-i])
             )
 
-        return answer_board, torch.tensor(self.__raw_data[idx][2])
+        return answer_board, torch.tensor(raw_data[2])
+
+    def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor]:
+        return self.__data[idx]
 
     def pad_id(self) -> int:
         return self.__sp.pad_id()

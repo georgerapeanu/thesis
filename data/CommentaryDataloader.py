@@ -25,8 +25,7 @@ def get_commentary_dataloader(config: DataConfig) -> Tuple[DataLoader, int, int,
     dl = DataLoader(
         ds,
         batch_size=config['batch_size'],
-        shuffle=False,
-        sampler=torch.utils.data.RandomSampler(ds, replacement=True, num_samples=int(1e12)),
+        shuffle=True,
         num_workers=config['num_workers'],
         collate_fn=collate_fn
     )

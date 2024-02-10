@@ -14,21 +14,21 @@ def get_objects():
         'split': 'train',
         'data_path': '../processed_data',
         'past_boards': 1,
-        'context_length': 512,
-        'sentencepiece_path': '../artifacts/sp8000.model',
+            'context_length': 128,
+        'sentencepiece_path': '../artifacts/sp800.model',
         'stride_big_sequences': 5,
-        'batch_size': 64,
-        'num_workers': 4
+        'batch_size': 512,
+        'num_workers': 2
     }
 
     val_data_config = {
         'split': 'valid',
         'data_path': '../processed_data',
         'past_boards': 1,
-        'context_length': 512,
-        'sentencepiece_path': '../artifacts/sp8000.model',
+        'context_length': 128,
+        'sentencepiece_path': '../artifacts/sp800.model',
         'stride_big_sequences': 5,
-        'batch_size': 64,
+        'batch_size': 512,
         'num_workers': 4
     }
 
@@ -36,21 +36,21 @@ def get_objects():
     val_dl, _, _, _ = get_commentary_dataloader(val_data_config)
 
     model_config = {
-        'text_embedding_size': 256,
-        'conv_modules_count': 3,
-        'transformer_blocks': 3,
-        'board_intermediary_channels': 512,
-        'board_in_channels': 494,
+        'text_embedding_size': 128,
+        'conv_modules_count': 2,
+        'transformer_blocks': 2,
+        'board_intermediary_channels': 128,
+        'board_in_channels': 110,
         'board_height': 8,
         'board_width': 8,
         'data_config': train_data_config,
-        'board_embedding_size': 256,
-        'ff_inner_channels': 1024,
+        'board_embedding_size': 128,
+        'ff_inner_channels': 128,
         'num_heads': 8,
         'vocab_size': vocab_size,
         'optimizer': Optimizers.ADAM,
-        'batches_per_epoch': 10,
-        'val_batches_per_epoch': 10,
+        'batches_per_epoch': 100,
+        'val_batches_per_epoch': 100,
         'lr': 0.01,
         'eos_id': eos_id,
         'bos_id': bos_id
@@ -79,21 +79,21 @@ def generate(batch: torch.Tensor, model, model_config: ModelConfig):
 if __name__ == '__main__':
     train_dl, val_dl, model, optimizer, model_config = get_objects()
     model.train()
-    train_losses = []
-    epoch = 0
-    for i, (X_board, X_text, y_sequence, pad_mask) in zip(itertools.count(1), train_dl):
-        optimizer.zero_grad()
-        _, loss = model(X_board, X_text, pad_mask, y_sequence)
-        train_losses.append(loss.item())
-        optimizer.step()
-
-        if i % model_config['batches_per_epoch'] == 0:
-            model.eval()
-            val_losses = [model(X_board, X_text, pad_mask, y_sequence)[1].item() for _, (X_board, X_text, y_sequence, pad_mask) in zip(range(model_config['batches_per_epoch']), val_dl)]
-            print(generate(next(iter(val_dl)), model, model_config))
-
-            model.train()
-
-            epoch += 1
-            print(f"Epoch {epoch} finished, train loss: {sum(train_losses) / len(train_losses)}, val loss: {sum(val_losses) / len(val_losses)}")
-            train_losses = []
+    for epoch in itertools.count(1):
+        train_losses = []
+        model.train()
+        for (X_board, X_text, y_sequence, pad_mask) in train_dl:
+            optimizer.zero_grad()
+            _, loss = model(X_board, X_text, pad_mask, y_sequence)
+            train_losses.append(loss.item())
+            optimizer.step()
+        model.eval()
+        val_losses = []
+        with torch.no_grad():
+            for (X_board, X_text, y_sequence, pad_mask) in val_dl:
+                optimizer.zero_grad()
+                _, loss = model(X_board, X_text, pad_mask, y_sequence)
+                val_losses.append(loss.item())
+                optimizer.step()
+        print(
+            f"Epoch {epoch} finished, train loss: {sum(train_losses) / len(train_losses)}, val loss: {sum(val_losses) / len(val_losses)}")
