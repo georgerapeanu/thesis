@@ -32,8 +32,8 @@ def get_objects():
         'num_workers': 4
     }
 
-    train_dl, vocab_size = get_commentary_dataloader(train_data_config)
-    val_dl, _ = get_commentary_dataloader(val_data_config)
+    train_dl, vocab_size, bos_id, eos_id = get_commentary_dataloader(train_data_config)
+    val_dl, _, _, _ = get_commentary_dataloader(val_data_config)
 
     model_config = {
         'text_embedding_size': 256,
@@ -51,7 +51,9 @@ def get_objects():
         'optimizer': Optimizers.ADAM,
         'batches_per_epoch': 10,
         'val_batches_per_epoch': 10,
-        'lr': 0.01
+        'lr': 0.01,
+        'eos_id': eos_id,
+        'bos_id': bos_id
     }
 
     model = Model(model_config)
@@ -59,6 +61,19 @@ def get_objects():
     optimizer = torch.optim.Adam(model.parameters(), lr=model_config['lr']) if model_config['optimizer'] == Optimizers.ADAM else torch.optim.SGD(model.parameters(), lr=model_config['lr'])
 
     return train_dl, val_dl, model, optimizer, model_config
+
+def generate(batch: torch.Tensor, model, model_config: ModelConfig):
+    sp = sentencepiece.SentencePieceProcessor(model_file=model_config['data_config']['sentencepiece_path'])
+    (X_board, X_text, y_sequence, pad_mask) = batch
+    (X_board, X_text, y_sequence, pad_mask) = (X_board[:1], X_text[:1], y_sequence[:1], pad_mask[:1])
+    model_text = model.generate(X_board, torch.ones(1, 1, dtype=torch.int) * model_config['bos_id'], max_new_tokens=1024)
+    print(model_text.size(), model_text.tolist())
+    print(X_text.size(), X_text.tolist())
+    model_string = sp.decode(model_text.view(-1).tolist())
+    X_string = sp.decode(X_text.view(-1).tolist())
+    print(model_string)
+    print(X_string)
+
 
 
 if __name__ == '__main__':
@@ -75,10 +90,10 @@ if __name__ == '__main__':
         if i % model_config['batches_per_epoch'] == 0:
             model.eval()
             val_losses = [model(X_board, X_text, pad_mask, y_sequence)[1].item() for _, (X_board, X_text, y_sequence, pad_mask) in zip(range(model_config['batches_per_epoch']), val_dl)]
+            print(generate(next(iter(val_dl)), model, model_config))
 
             model.train()
 
             epoch += 1
             print(f"Epoch {epoch} finished, train loss: {sum(train_losses) / len(train_losses)}, val loss: {sum(val_losses) / len(val_losses)}")
             train_losses = []
-

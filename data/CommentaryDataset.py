@@ -25,7 +25,7 @@ class CommentaryDataset(Dataset):
                     past_boards.append((row[0], row[3]))
                     current_board = (row[1], row[4])
                     if len(row[2].strip()) == 0:
-                        pass
+                        continue
                     tokens = [self.__sp.bos_id()] + self.__sp.encode(row[2].strip().replace('\n', '<n>')) + [self.__sp.eos_id()]
                     if len(tokens) > config['context_length']:
                         for i in range(0, len(tokens) - 1 - config['context_length'], config['stride_big_sequences']):
@@ -183,6 +183,12 @@ class CommentaryDataset(Dataset):
 
     def pad_id(self) -> int:
         return self.__sp.pad_id()
+
+    def bos_id(self) -> int:
+        return self.__sp.bos_id()
+
+    def eos_id(self) -> int:
+        return self.__sp.eos_id()
 
     def vocab_size(self) -> int:
         return self.__sp.vocab_size()

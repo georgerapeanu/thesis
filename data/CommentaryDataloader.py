@@ -9,7 +9,7 @@ from utils.configs import DataConfig
 from typing import *
 
 
-def get_commentary_dataloader(config: DataConfig) -> Tuple[DataLoader, int]:
+def get_commentary_dataloader(config: DataConfig) -> Tuple[DataLoader, int, int, int]:
     ds = CommentaryDataset(config)
 
     def collate_fn(data):
@@ -31,7 +31,7 @@ def get_commentary_dataloader(config: DataConfig) -> Tuple[DataLoader, int]:
         collate_fn=collate_fn
     )
 
-    return dl, ds.vocab_size()
+    return dl, ds.vocab_size(), ds.bos_id(), ds.eos_id(),
 
 
 if __name__ == '__main__':

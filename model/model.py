@@ -146,6 +146,7 @@ class Model(nn.Module):
             for _ in range(config['transformer_blocks'])
         ])
         self.linear = nn.Linear(in_features=config['text_embedding_size'], out_features=config['vocab_size'])
+        self.__config = config
 
     def forward(self, X_board: torch.Tensor, X_text: torch.Tensor, padding_mask: torch.Tensor, targets: Optional[torch.Tensor] = None):
         X_board = self.board_preparation(X_board)
@@ -154,9 +155,9 @@ class Model(nn.Module):
         X_board = self.pe_board(X_board).view(b, -1, ch)
         X_text = self.emb(X_text)
         X_text = self.pe_text(X_text)
-        for decoder, encoder in zip(self.encoders, self.decoders):
-            X_board = decoder(X_board)
-            X_text = encoder(X_board, X_text, padding_mask)
+        for encoder, decoder in zip(self.encoders, self.decoders):
+            X_board = encoder(X_board)
+            X_text = decoder(X_board, X_text, padding_mask)
         logits = self.linear(X_text)
         loss = None
         if targets is not None:
@@ -166,3 +167,17 @@ class Model(nn.Module):
 
         return logits, loss
 
+    def generate(self, X_board: torch.Tensor, X_text: torch.Tensor, max_new_tokens: int, temperature: float = 1.0, do_sample:bool = False):
+        for _ in range(max_new_tokens):
+            X_text_in = X_text if X_text.size(1) < self.__config['data_config']['context_length'] else X_text[:, -self.__config['data_config']['context_length']:]
+            logits, _ = self(X_board, X_text_in, torch.zeros(1, X_text_in.size(1)) == 1)
+            logits = logits[:, -1, :] / temperature
+            probs = torch.nn.functional.softmax(logits, dim=-1)
+            if do_sample is not None:
+                text_next = torch.multinomial(probs, num_samples=1)
+            else:
+                _, text_next = torch.topk(probs, k=1, dim=-1)
+            X_text = torch.cat([X_text, text_next], dim=1)
+            if text_next == self.__config['eos_id']:
+                break
+        return X_text
