@@ -26,7 +26,7 @@ def get_commentary_dataloader(config: DataConfig) -> Tuple[DataLoader, int, int,
         ds,
         batch_size=config['batch_size'],
         shuffle=True,
-        num_workers=config['num_workers'],
+        num_workers=config['dl_num_workers'],
         collate_fn=collate_fn
     )
 

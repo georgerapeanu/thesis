@@ -21,7 +21,8 @@ class DataConfig(TypedDict):
     sentencepiece_path: str
     stride_big_sequences: int
     batch_size: int
-    num_workers: int
+    dl_num_workers: int
+    ds_num_workers: int
 
 
 class Optimizers(enum.Enum):

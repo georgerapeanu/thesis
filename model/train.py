@@ -14,11 +14,12 @@ def get_objects():
         'split': 'train',
         'data_path': '../processed_data',
         'past_boards': 1,
-            'context_length': 128,
+        'context_length': 128,
         'sentencepiece_path': '../artifacts/sp800.model',
         'stride_big_sequences': 5,
         'batch_size': 512,
-        'num_workers': 2
+        'dl_num_workers': 2,
+        'ds_num_workers': 8,
     }
 
     val_data_config = {
@@ -29,7 +30,8 @@ def get_objects():
         'sentencepiece_path': '../artifacts/sp800.model',
         'stride_big_sequences': 5,
         'batch_size': 512,
-        'num_workers': 4
+        'dl_num_workers': 2,
+        'ds_num_workers': 8,
     }
 
     train_dl, vocab_size, bos_id, eos_id = get_commentary_dataloader(train_data_config)
