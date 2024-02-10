@@ -1,3 +1,4 @@
+import itertools
 import os
 
 import chess
@@ -63,25 +64,19 @@ class CommentaryDataset(Dataset):
     def __get_positional_features(self, board: chess.Board, evaluation: int) -> torch.tensor:
         layers = torch.zeros([15, 8, 8], dtype=torch.int32)
 
-        i = 0
         # P1 and P2 -> 12
-        for color in [chess.WHITE, chess.BLACK]:
-            for piece in [chess.PAWN, chess.ROOK, chess.KING, chess.BISHOP, chess.QUEEN, chess.KNIGHT]:
+        for i, (color, piece) in enumerate(itertools.product([chess.WHITE, chess.BLACK], [chess.PAWN, chess.ROOK, chess.KING, chess.BISHOP, chess.QUEEN, chess.KNIGHT])):
                 layers[i, :, :] = torch.tensor(board.pieces(piece, color).tolist(), dtype=torch.int32).reshape((8, 8))
-                i += 1
 
         # checks -> 1
-        layers[i, :, :] = (torch.tensor(board.checkers().tolist(), dtype=torch.int32).reshape((8, 8)))
-        i += 1
+        layers[12, :, :] = (torch.tensor(board.checkers().tolist(), dtype=torch.int32).reshape((8, 8)))
         # strength -> 1
-        layers[i, :, :] = (torch.full([8, 8], evaluation))
-        i += 1
+        layers[13, :, :] = (torch.full([8, 8], evaluation))
 
         # Repetitions -> 1
         for count in range(3, -1, -1):
             if count == 0 or board.is_repetition(count):
-                layers[i, :, :] = (torch.full((8, 8), count))
-                i += 1
+                layers[14, :, :] = (torch.full((8, 8), count))
                 break
         # Total 15, shape 15 x 8 x 8
         return layers
