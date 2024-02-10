@@ -82,7 +82,7 @@ class EncoderBlock(nn.Module):
         self.dropout = nn.Dropout(p=0.1)
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
-        X = self.layer_norm1(X + self.dropout(self.mha(query=X, key=X, value=X, needs_weights=False)[0]))
+        X = self.layer_norm1(X + self.dropout(self.mha(query=X, key=X, value=X, need_weights=False)[0]))
         X = self.layer_norm2(X + self.dropout(self.feed_forward(X)))
         return X
 
@@ -116,8 +116,8 @@ class DecoderBlock(nn.Module):
         self.dropout = nn.Dropout(p=0.1)
 
     def forward(self, encoder_output: torch.Tensor, X: torch.Tensor, pad_mask: torch.Tensor) -> torch.Tensor:
-        X = self.layer_norm1(X + self.dropout(self.mha1(query=X, key=X, value=X, needs_weights=False, pad_mask=pad_mask, attn_mask=self.attn_mask[:X.size(1), :X.size(1)])[0]))
-        X = self.layer_norm2(X + self.dropout(self.mha2(query=encoder_output, key=encoder_output, value=X, needs_weights=False, pad_mask=pad_mask)))
+        X = self.layer_norm1(X + self.dropout(self.mha1(query=X, key=X, value=X, need_weights=False, key_padding_mask=pad_mask, attn_mask=self.attn_mask[:X.size(1), :X.size(1)])[0]))
+        X = self.layer_norm2(X + self.dropout(self.mha2(query=X, key=encoder_output, value=encoder_output, need_weights=False)[0]))
         X = self.layer_norm3(X + self.dropout(self.feed_forward(X)))
         return X
 
@@ -129,11 +129,22 @@ class Model(nn.Module):
             nn.Conv2d(in_channels=config['board_in_channels'], out_channels=config['board_embedding_size'], kernel_size=1, padding=0, bias=True),
             *[ResidualBlock(in_channels=config['board_embedding_size'], intermediary_channels=config['board_intermediary_channels']) for _ in range(config['conv_modules_count'])]
         )
+
+        self.emb = torch.nn.Embedding(num_embeddings=config['vocab_size'], embedding_dim=config['text_embedding_size'])
+
         self.pe_board = PositionalEncoding2D(config['board_height'], config['board_width'], config['board_embedding_size'])
         self.pe_text = PositionalEncoding1D(config['data_config']['context_length'], config['text_embedding_size'])
 
         self.encoders = nn.ModuleList([EncoderBlock(ff_inner_channels=config['ff_inner_channels'], num_heads=config['num_heads'], embed_dims=config['board_embedding_size']) for _ in range(config['transformer_blocks'])])
-        self.decoders = nn.ModuleList([DecoderBlock(ff_inner_channels=config['ff_inner_channels'], num_heads=config['num_heads'], decoder_embed_dims=config['text_embedding_size'], encoder_embed_dims=config['board_embedding_size']) for _ in range(config['transformer_blocks'])])
+        self.decoders = nn.ModuleList([
+            DecoderBlock(
+                ff_inner_channels=config['ff_inner_channels'],
+                num_heads=config['num_heads'],
+                decoder_embed_dims=config['text_embedding_size'],
+                encoder_embed_dims=config['board_embedding_size'],
+                max_length=config['data_config']['context_length'])
+            for _ in range(config['transformer_blocks'])
+        ])
         self.linear = nn.Linear(in_features=config['text_embedding_size'], out_features=config['vocab_size'])
 
     def forward(self, X_board: torch.Tensor, X_text: torch.Tensor, padding_mask: torch.Tensor, targets: Optional[torch.Tensor] = None):
@@ -141,15 +152,17 @@ class Model(nn.Module):
         X_board = X_board.permute(0, 2, 3, 1)
         b, _, _, ch = X_board.shape
         X_board = self.pe_board(X_board).view(b, -1, ch)
+        X_text = self.emb(X_text)
         X_text = self.pe_text(X_text)
         for decoder, encoder in zip(self.encoders, self.decoders):
             X_board = decoder(X_board)
             X_text = encoder(X_board, X_text, padding_mask)
         logits = self.linear(X_text)
         loss = None
-
-        if targets is None:
-            loss = torch.nn.functional.cross_entropy(logits, weight=(1 - padding_mask.int()))
+        if targets is not None:
+            log_logits = -torch.nn.functional.log_softmax(logits, dim=-1)
+            log_logits = log_logits.masked_fill(padding_mask.unsqueeze(-1), 0)
+            loss = torch.gather(log_logits, -1, targets.unsqueeze(-1)).sum() / padding_mask.int().sum()
 
         return logits, loss
 

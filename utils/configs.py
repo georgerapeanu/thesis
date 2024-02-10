@@ -1,3 +1,4 @@
+import enum
 from typing import *
 
 
@@ -23,6 +24,11 @@ class DataConfig(TypedDict):
     num_workers: int
 
 
+class Optimizers(enum.Enum):
+    ADAM = 0
+    SGD = 1
+
+
 class ModelConfig(TypedDict):
     text_embedding_size: int
     conv_modules_count: int
@@ -35,4 +41,9 @@ class ModelConfig(TypedDict):
     board_embedding_size: int
     ff_inner_channels: int
     num_heads: int
+    vocab_size: int
+    optimizer: Optimizers
+    lr: int
+    batches_per_epoch: int
+    val_batches_per_epoch: int
     vocab_size: int

@@ -184,6 +184,9 @@ class CommentaryDataset(Dataset):
     def pad_id(self) -> int:
         return self.__sp.pad_id()
 
+    def vocab_size(self) -> int:
+        return self.__sp.vocab_size()
+
 # outdated
 # if __name__ == "__main__":
 #     ds = CommentaryDataset({
