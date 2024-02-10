@@ -12,10 +12,14 @@ def get_commentary_dataloader(config: DataConfig):
     ds = CommentaryDataset(config)
 
     def collate_fn(data):
-        board_data, sequences = torch.stack(list(map(lambda x: x[0], data))), pad_sequence(list(map(lambda x: x[1], data)), batch_first=True)
+        board_data = torch.stack(list(map(lambda x: x[0], data)))
+        sequences = pad_sequence(list(map(lambda x: x[1], data)), batch_first=True, padding_value=ds.pad_id())
+        next_pad_mask = pad_sequence([torch.ones(len(sequence)) for _, sequence in data], batch_first=True, padding_value=0)
+        next_pad_mask = torch.cat([next_pad_mask, torch.zeros(next_pad_mask.size(0), 1)], dim=1)[:, 1:]
+        next_pad_mask = (next_pad_mask == 0)
         X_sequence = sequences[:, :-1]
         y_sequence = sequences[:, 1:]
-        return board_data, X_sequence, y_sequence
+        return board_data, X_sequence, y_sequence, next_pad_mask
 
     dl = DataLoader(
         ds,
@@ -32,14 +36,15 @@ if __name__ == '__main__':
         'split': 'train',
         'data_path': '../processed_data',
         'past_boards': 2,
-        'context_length': 100,
+        'context_length': 1024,
         'sentencepiece_path': '../artifacts/sp8000.model',
         'stride_big_sequences': 1,
         'batch_size': 128,
         'num_workers': 8
     })
     a = time.time()
-    data = next(iter(dl))
-    print(data[0].shape, data[1].shape, data[2].shape)
+    print(next(iter(dl)))
+    for batch in dl:
+        print(batch[0].shape, batch[1].shape, batch[2].shape, batch[3].shape)
     b = time.time()
     print(b - a)

@@ -21,3 +21,18 @@ class DataConfig(TypedDict):
     stride_big_sequences: int
     batch_size: int
     num_workers: int
+
+
+class ModelConfig(TypedDict):
+    text_embedding_size: int
+    conv_modules_count: int
+    transformer_blocks: int
+    board_intermediary_channels: int
+    board_in_channels: int
+    board_height: int
+    board_width: int
+    data_config: DataConfig
+    board_embedding_size: int
+    ff_inner_channels: int
+    num_heads: int
+    vocab_size: int
