@@ -7,10 +7,10 @@ import torch
 import torch.nn as nn
 import wandb
 
-from model.model import Model, DummyModel
+from model.model import Model
 from model.model_checkpoint import ModelCheckpoint
 from model.predict import Predictor
-from utils.configs import DataConfig, ModelConfig, Optimizers, TrainConfig
+from utils.configs import DataConfig, ModelConfig, Optimizers, TrainConfig, SharedConfig
 from data.CommentaryDataset import CommentaryDataset
 from data.CommentaryDataloader import get_commentary_dataloader
 from typing import *
@@ -22,6 +22,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 def train(
         model_config: ModelConfig,
         train_config: TrainConfig,
+        shared_config: SharedConfig,
         train_dl: torch.utils.data.DataLoader,
         val_dl: torch.utils.data.DataLoader,
         test_ds: CommentaryDataset,
@@ -30,7 +31,7 @@ def train(
 ) -> Model:
 
     if model is None:
-        model = Model(model_config)
+        model = Model(model_config, shared_config)
 
     model = model.to(device)
 
