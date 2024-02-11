@@ -13,16 +13,25 @@ class EngineConfig(TypedDict):
     raw_data_path: str
 
 
+class SharedConfig(TypedDict):
+    context_length: int
+    sentencepiece_path: str
+    eos_id: int
+    bos_id: int
+    pad_id: int
+    vocab_size: int
+
+
 class DataConfig(TypedDict):
     split: str
     data_path: str
     past_boards: int
-    context_length: int
-    sentencepiece_path: str
     stride_big_sequences: int
     batch_size: int
     dl_num_workers: int
-    ds_num_workers: int
+    in_memory: bool
+    dl_shuffle: bool
+    dl_samples: Optional[int]
 
 
 class Optimizers(enum.Enum):
@@ -38,13 +47,34 @@ class ModelConfig(TypedDict):
     board_in_channels: int
     board_height: int
     board_width: int
-    data_config: DataConfig
     board_embedding_size: int
     ff_inner_channels: int
     num_heads: int
-    vocab_size: int
+
+
+class TrainConfig(TypedDict):
     optimizer: Optimizers
     lr: int
-    vocab_size: int
-    eos_id: int
-    bos_id: int
+    with_wandb: bool
+    num_epochs: int
+    predict_sentences: int
+
+
+class WandbConfig(TypedDict):
+    text_embedding_size: int
+    conv_modules_count: int
+    transformer_blocks: int
+    board_intermediary_channels: int
+    board_embedding_size: int
+    ff_inner_channels: int
+    num_heads: int
+    lr: int
+    optimizer: str
+    num_epochs: int
+    context_length: int
+    sp_vocab: int
+    batch_size: int
+    past_boards: int
+    stride_big_sequences: int
+    samples_per_train_epoch: int
+    predict_sentences: int

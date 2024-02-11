@@ -1,5 +1,4 @@
 import itertools
-import multiprocessing
 import os
 
 import chess
@@ -10,46 +9,45 @@ from torch.utils.data import Dataset
 from typing import *
 import polars as pl
 from torch.nn.utils.rnn import pad_sequence
-from utils.configs import DataConfig
+from utils.configs import DataConfig, SharedConfig
 import sentencepiece
 FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
 INV_FILES = {'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, 'f': 5, 'g': 6, 'h': 7}
 ROWS = ['1', '2', '3', '4', '5', '6', '7', '8']
 INV_ROWS = {'1': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6, '8': 7}
 INV_PROMOTIONS = {'b': 0, 'r': 1, 'n': 2}
+POSITIONAL_SIZE = 15
+MOVE_SIZE = 73
+STATE_SIZE = 7
+
+
 class CommentaryDataset(Dataset):
-    def __init__(self, config: DataConfig):
+    def __init__(self, config: DataConfig, shared_config: SharedConfig):
         self.__config = config
         self.__deltas, self.__inv_deltas = CommentaryDataset.__all_move_deltas()
-        self.__sp = sentencepiece.SentencePieceProcessor(model_file=self.__config['sentencepiece_path'])
+        self.__sp = sentencepiece.SentencePieceProcessor(model_file=shared_config['sentencepiece_path'])
 
+        self.__raw_data = []
         self.__data = []
 
-        with multiprocessing.Pool(config['ds_num_workers']) as p:
-            self.__data = list(itertools.chain(p.map(self.worker, os.listdir(os.path.join(self.__config['data_path'], self.__config['split'])))))
-
-
-    def worker(self, filename):
-        work_data = []
-        local_data = pl.read_parquet(
-            os.path.join(self.__config['data_path'], self.__config['split'], filename)).rows()
-        past_boards = []
-        for row in local_data:
-            past_boards.append((row[0], row[3]))
-            current_board = (row[1], row[4])
-            if len(row[2].strip()) == 0:
-                continue
-            tokens = [self.__sp.bos_id()] + self.__sp.encode(row[2].strip().replace('\n', '<n>')) + [
-                self.__sp.eos_id()]
-            if len(tokens) > self.__config['context_length']:
-                for i in range(0, len(tokens) - 1 - self.__config['context_length'], self.__config['stride_big_sequences']):
-                    work_data.append(self.raw_data_to_data((past_boards[
-                                                              max(0, len(past_boards) - self.__config['past_boards']):],
-                                                              current_board,
-                                                              tokens[i:i + self.__config['context_length'] + 1])))
-            else:
-                work_data.append(self.raw_data_to_data(
-                    (past_boards[max(0, len(past_boards) - self.__config['past_boards']):], current_board, tokens)))
+        for filename in os.listdir(os.path.join(self.__config['data_path'], self.__config['split'])):
+            local_data = pl.read_parquet(os.path.join(self.__config['data_path'], self.__config['split'], filename)).rows()
+            past_boards = []
+            for row in local_data:
+                past_boards.append((row[0], row[3]))
+                current_board = (row[1], row[4])
+                if len(row[2].strip()) == 0:
+                    continue
+                tokens = [self.__sp.bos_id()] + self.__sp.encode(row[2].strip().replace('\n', '<n>')) + [self.__sp.eos_id()]
+                if len(tokens) > shared_config['context_length']:
+                    for i in range(0, len(tokens) - 1 - shared_config['context_length'], config['stride_big_sequences']):
+                        self.__raw_data.append((past_boards[max(0, len(past_boards) - config['past_boards']):], current_board, tokens[i:i + shared_config['context_length'] + 1]))
+                        if self.__config['in_memory']:
+                            self.__data.append(self.raw_data_to_data(self.__raw_data[-1]))
+                else:
+                    self.__raw_data.append((past_boards[max(0, len(past_boards) - config['past_boards']):], current_board, tokens))
+                    if self.__config['in_memory']:
+                        self.__data.append(self.raw_data_to_data(self.__raw_data[-1]))
 
     @staticmethod
     def __all_move_deltas() -> Tuple[List[Tuple[int, int]], Dict[Tuple[int, int], int]]:
@@ -131,12 +129,9 @@ class CommentaryDataset(Dataset):
         return move_features
 
     def __len__(self):
-        return len(self.__data)
+        return len(self.__raw_data)
 
     def raw_data_to_data(self, raw_data):
-        POSITIONAL_SIZE = 15
-        MOVE_SIZE = 73
-        STATE_SIZE = 7
         answer_board = torch.zeros(
             [STATE_SIZE + POSITIONAL_SIZE * self.__config['past_boards'] + (POSITIONAL_SIZE + MOVE_SIZE), 8, 8],
             dtype=torch.int32)
@@ -154,9 +149,9 @@ class CommentaryDataset(Dataset):
         answer_board[-STATE_SIZE - MOVE_SIZE:-STATE_SIZE, :, :] = self.__get_all_move_features(current_board)
         answer_board[-STATE_SIZE - POSITIONAL_SIZE - MOVE_SIZE:-STATE_SIZE - MOVE_SIZE, :,
         :] = self.__get_positional_features(current_board, current_eval)
-        for i in range(0, len(past_boards)):
+        for i in range(1, len(past_boards) + 1):
             answer_board[
-            -STATE_SIZE - (i + 2) * POSITIONAL_SIZE - MOVE_SIZE:-STATE_SIZE - (i + 1) * POSITIONAL_SIZE - MOVE_SIZE,
+            -STATE_SIZE - (i + 1) * POSITIONAL_SIZE - MOVE_SIZE:-STATE_SIZE - i * POSITIONAL_SIZE - MOVE_SIZE,
             :,
             :
             ] = (
@@ -166,36 +161,30 @@ class CommentaryDataset(Dataset):
         return answer_board, torch.tensor(raw_data[2])
 
     def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor]:
-        return self.__data[idx]
+        if self.__config['in_memory']:
+            return self.__data[idx]
+        else:
+            return self.raw_data_to_data(self.__raw_data[idx])
 
-    def pad_id(self) -> int:
-        return self.__sp.pad_id()
+    def get_raw_data(self, idx: int) -> Tuple[Optional[str], str, Optional[int], int]:
+        current_board, current_eval = self.__raw_data[idx][1]
+        past_board, past_eval = None
+        if len(self.__raw_data[idx][0]) != 0:
+            past_board, past_eval = self.__raw_data[idx][0][-1]
+        return current_board, past_board, current_eval, past_eval
 
-    def bos_id(self) -> int:
+    @staticmethod
+    def get_board_channels(config: DataConfig) -> int:
+        return STATE_SIZE + POSITIONAL_SIZE * config['past_boards'] + (POSITIONAL_SIZE + MOVE_SIZE)
+
+    def get_bos_id(self) -> int:
         return self.__sp.bos_id()
 
-    def eos_id(self) -> int:
+    def get_eos_id(self) -> int:
         return self.__sp.eos_id()
 
-    def vocab_size(self) -> int:
-        return self.__sp.vocab_size()
+    def get_pad_id(self) -> int:
+        return self.__sp.pad_id()
 
-# outdated
-# if __name__ == "__main__":
-#     ds = CommentaryDataset({
-#         'split': 'train',
-#         'raw_data_path': '../raw_data',
-#         'past_boards': 8,
-#         'mate_value': 10000,
-#         'context_length': 100,
-#         'sentencepiece_path': '../artifacts/sp8000.model',
-#         'stride_big_sequences': 1,
-#         'engine_config': {
-#             'threads': 4,
-#             'hash': 64,
-#             'minimum_thinking_time': 1,
-#             'location': '../artifacts/stockfish-ubuntu-x86-64-avx2',
-#             'engine_depth': 5,
-#         }
-#     })
-#     print(ds[0])
+    def get_vocab_size(self) -> int:
+        return self.__sp.vocab_size()

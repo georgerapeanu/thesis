@@ -52,18 +52,20 @@ class ResidualBlock(nn.Module):
     def __init__(self, in_channels: int, intermediary_channels: int):
         super(ResidualBlock, self).__init__()
         self.residual_layer = nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=intermediary_channels, kernel_size=3, padding='same', bias=False, groups=in_channels),
-            nn.Conv2d(in_channels=intermediary_channels, out_channels=intermediary_channels, kernel_size=1, padding='same', bias=False),
+            nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=3, padding='same', bias=False, groups=in_channels),
+            nn.Conv2d(in_channels=in_channels, out_channels=intermediary_channels, kernel_size=1, padding='same', bias=False),
             nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=intermediary_channels, out_channels=in_channels, kernel_size=3, padding='same', bias=False, groups=intermediary_channels),
-            nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=1, padding='same', bias=False),
-            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=intermediary_channels, out_channels=intermediary_channels, kernel_size=3, padding='same', bias=False, groups=intermediary_channels),
+            nn.Conv2d(in_channels=intermediary_channels, out_channels=in_channels, kernel_size=1, padding='same', bias=False),
+            nn.ReLU(inplace=True)
+        )
+        self.norm = nn.Sequential(
             nn.BatchNorm2d(in_channels),
             nn.Dropout(p=0.1)
         )
 
-    def forward(self, X):
-        return self.residual_layer(X) + X
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
+        return self.norm(self.residual_layer(X) + X)
 
 
 class EncoderBlock(nn.Module):
@@ -102,6 +104,7 @@ class DecoderBlock(nn.Module):
         self.mha2 = torch.nn.MultiheadAttention(
             embed_dim=decoder_embed_dims,
             kdim=encoder_embed_dims,
+            vdim=encoder_embed_dims,
             num_heads=num_heads,
             batch_first=True
         )
@@ -160,6 +163,55 @@ class Model(nn.Module):
         for encoder, decoder in zip(self.encoders, self.decoders):
             X_board = encoder(X_board)
             X_text = decoder(X_board, X_text, padding_mask)
+        logits = self.linear(X_text)
+        loss = None
+        if targets is not None:
+            log_logits = -torch.nn.functional.log_softmax(logits, dim=-1)
+            log_logits = log_logits.masked_fill(padding_mask.unsqueeze(-1), 0)
+            loss = torch.gather(log_logits, -1, targets.unsqueeze(-1)).sum() / padding_mask.int().sum()
+
+        return logits, loss
+
+    def generate(self, X_board: torch.Tensor, X_text: torch.Tensor, max_new_tokens: int, temperature: float = 1.0, do_sample:bool = False) -> torch.Tensor:
+        for _ in range(max_new_tokens):
+            X_text_in = X_text if X_text.size(1) < self.__config['data_config']['context_length'] else X_text[:, -self.__config['data_config']['context_length']:]
+            logits, _ = self(X_board, X_text_in, torch.zeros(1, X_text_in.size(1)) == 1)
+            logits = logits[:, -1, :] / temperature
+            probs = torch.nn.functional.softmax(logits, dim=-1)
+            if do_sample is not None:
+                text_next = torch.multinomial(probs, num_samples=1)
+            else:
+                _, text_next = torch.topk(probs, k=1, dim=-1)
+            X_text = torch.cat([X_text, text_next], dim=1)
+            if text_next == self.__config['eos_id']:
+                break
+        return X_text
+
+class DummyModel(nn.Module):
+    def __init__(self, config: ModelConfig):
+        super(DummyModel, self).__init__()
+
+        self.emb = torch.nn.Embedding(num_embeddings=config['vocab_size'], embedding_dim=config['text_embedding_size'])
+
+        self.pe_text = PositionalEncoding1D(config['data_config']['context_length'], config['text_embedding_size'])
+
+        self.decoders = nn.ModuleList([
+            DecoderBlock(
+                ff_inner_channels=config['ff_inner_channels'],
+                num_heads=config['num_heads'],
+                decoder_embed_dims=config['text_embedding_size'],
+                encoder_embed_dims=config['text_embedding_size'],
+                max_length=config['data_config']['context_length'])
+            for _ in range(config['transformer_blocks'])
+        ])
+        self.linear = nn.Linear(in_features=config['text_embedding_size'], out_features=config['vocab_size'])
+        self.__config = config
+
+    def forward(self, X_board: torch.Tensor, X_text: torch.Tensor, padding_mask: torch.Tensor, targets: Optional[torch.Tensor] = None):
+        X_text = self.emb(X_text)
+        X_text = self.pe_text(X_text)
+        for decoder in self.decoders:
+            X_text = decoder(torch.zeros(X_text.size()), X_text, padding_mask)
         logits = self.linear(X_text)
         loss = None
         if targets is not None:

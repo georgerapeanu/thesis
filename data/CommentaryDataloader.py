@@ -2,51 +2,44 @@ import time
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, RandomSampler
 
 from data.CommentaryDataset import CommentaryDataset
-from utils.configs import DataConfig
+from utils.configs import DataConfig, SharedConfig
 from typing import *
 
 
-def get_commentary_dataloader(config: DataConfig) -> Tuple[DataLoader, int, int, int]:
-    ds = CommentaryDataset(config)
+def get_commentary_dataloader(config: DataConfig, shared_config: SharedConfig) -> Tuple[DataLoader, SharedConfig]:
+    ds = CommentaryDataset(config, shared_config)
+    shared_config['pad_id'] = ds.get_pad_id()
+    shared_config['bos_id'] = ds.get_bos_id()
+    shared_config['eos_id'] = ds.get_eos_id()
+    shared_config['vocab_size'] = ds.get_vocab_size()
 
     def collate_fn(data):
         board_data = torch.stack(list(map(lambda x: x[0], data)))
-        sequences = pad_sequence(list(map(lambda x: x[1], data)), batch_first=True, padding_value=ds.pad_id())
-        next_pad_mask = pad_sequence([torch.ones(len(sequence)) for _, sequence in data], batch_first=True, padding_value=0)
-        next_pad_mask = next_pad_mask[:, 1:]
-        next_pad_mask = (next_pad_mask == 0)
+        sequences = pad_sequence(list(map(lambda x: x[1], data)), batch_first=True, padding_value=shared_config['pad_id'])
         X_sequence = sequences[:, :-1]
         y_sequence = sequences[:, 1:]
+        next_pad_mask = (y_sequence == shared_config['pad_id'])
         return board_data.float(), X_sequence, y_sequence, next_pad_mask
 
-    dl = DataLoader(
-        ds,
-        batch_size=config['batch_size'],
-        shuffle=True,
-        num_workers=config['dl_num_workers'],
-        collate_fn=collate_fn
-    )
+    if config['dl_samples'] is not None:
+        dl = DataLoader(
+            ds,
+            sampler=RandomSampler(ds, replacement=True, num_samples=config['dl_samples']),
+            batch_size=config['batch_size'],
+            shuffle=config['dl_shuffle'],
+            num_workers=config['dl_num_workers'],
+            collate_fn=collate_fn
+        )
+    else:
+        dl = DataLoader(
+            ds,
+            batch_size=config['batch_size'],
+            shuffle=config['dl_shuffle'],
+            num_workers=config['dl_num_workers'],
+            collate_fn=collate_fn
+        )
 
-    return dl, ds.vocab_size(), ds.bos_id(), ds.eos_id(),
-
-
-if __name__ == '__main__':
-    dl = get_commentary_dataloader({
-        'split': 'train',
-        'data_path': '../processed_data',
-        'past_boards': 2,
-        'context_length': 1024,
-        'sentencepiece_path': '../artifacts/sp8000.model',
-        'stride_big_sequences': 1,
-        'batch_size': 128,
-        'num_workers': 8
-    })
-    a = time.time()
-    print(next(iter(dl)))
-    for batch in dl:
-        print(batch[0].shape, batch[1].shape, batch[2].shape, batch[3].shape)
-    b = time.time()
-    print(b - a)
+    return dl, shared_config
