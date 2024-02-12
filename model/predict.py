@@ -11,12 +11,12 @@ class Predictor:
         self.__context_length = shared_config['context_length']
 
     def tokens_to_string(self, tokens: torch.Tensor) -> str:
-        return self.__sp.decode(tokens).replace("<n>", "\n")
+        return self.__sp.decode(tokens.view(-1).tolist()).replace("<n>", "\n")
 
     def predict(self, model: Model, X_board: torch.tensor, text: str, max_new_tokens: int, device: str) -> str:
         tokens = self.__sp.encode(text.strip().replace('\n', '<n>'))
         tokens = [self.__sp.bos_id()] + tokens
         tokens = torch.Tensor(tokens).unsqueeze(0).int().to(device)
         model.eval()
-        tokens = model.generate(X_board, tokens, max_new_tokens)
+        tokens = model.generate(X_board.unsqueeze(0), tokens, max_new_tokens)
         return self.tokens_to_string(tokens)

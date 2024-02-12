@@ -22,7 +22,7 @@ def get_commentary_dataloader(config: DataConfig, shared_config: SharedConfig) -
         X_sequence = sequences[:, :-1]
         y_sequence = sequences[:, 1:]
         next_pad_mask = (y_sequence == shared_config['pad_id'])
-        return board_data.float(), X_sequence, y_sequence, next_pad_mask
+        return board_data, X_sequence, y_sequence, next_pad_mask
 
     if config['dl_samples'] is not None:
         dl = DataLoader(

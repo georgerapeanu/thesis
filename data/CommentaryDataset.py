@@ -158,7 +158,7 @@ class CommentaryDataset(Dataset):
                 self.__get_positional_features(past_boards[-i], past_evals[-i])
             )
 
-        return answer_board, torch.tensor(raw_data[2])
+        return answer_board.float(), torch.tensor(raw_data[2])
 
     def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor]:
         if self.__config['in_memory']:
@@ -168,7 +168,7 @@ class CommentaryDataset(Dataset):
 
     def get_raw_data(self, idx: int) -> Tuple[Optional[str], str, Optional[int], int]:
         current_board, current_eval = self.__raw_data[idx][1]
-        past_board, past_eval = None
+        past_board, past_eval = None, None
         if len(self.__raw_data[idx][0]) != 0:
             past_board, past_eval = self.__raw_data[idx][0][-1]
         return current_board, past_board, current_eval, past_eval

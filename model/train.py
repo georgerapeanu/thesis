@@ -1,4 +1,5 @@
 import itertools
+from io import BytesIO
 
 import chess
 import chess.svg
@@ -6,6 +7,8 @@ import sentencepiece
 import torch
 import torch.nn as nn
 import wandb
+from PIL import Image
+from cairosvg import svg2png
 
 from model.model import Model
 from model.model_checkpoint import ModelCheckpoint
@@ -74,16 +77,18 @@ def train(
             print(f"Past evaluation {0 if past_eval is None else past_eval}")
             print(f"Current board {str(chess.Board(current_board))}")
             print(f"Current evaluation {current_eval}")
+            print(f"Actual prediction {actual_text}")
+            print(f"Predicted text {predicted_text}")
             print("=" * 100)
             if train_config['with_wandb']:
-                wandb_table.add_data([
-                    wandb.Image(chess.svg.board(None if past_board is None else chess.Board(past_board))),
+                wandb_table.add_data(
+                    wandb.Image(Image.open(BytesIO(svg2png(chess.svg.board(None if past_board is None else chess.Board(past_board))))).convert('RGBA')),
                     {0 if past_eval is None else past_eval},
-                    wandb.Image(chess.svg.board(chess.Board(current_board))),
+                    wandb.Image(Image.open(BytesIO(svg2png(chess.svg.board(chess.Board(current_board))))).convert('RGBA')),
                     current_eval,
                     actual_text,
                     predicted_text
-                ])
+                )
         if train_config['with_wandb']:
             wandb.log({
                 'train_loss': train_loss,
