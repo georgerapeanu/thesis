@@ -92,10 +92,10 @@ class CommentaryDataset(Dataset):
         # Total 15, shape 15 x 8 x 8
         return layers
 
-    def __get_state_features(self, board: chess.Board) -> torch.tensor:
+    def __get_state_features(self, board: chess.Board, mirrored: bool) -> torch.tensor:
         layers = torch.zeros((7, 8, 8))
         # Color -> 1
-        layers[0].fill_((0 if board.turn is chess.WHITE else 1))
+        layers[0].fill_((0 if (board.turn == chess.WHITE and not mirrored) or (board.turn == chess.BLACK and mirrored) else 1))
         # Total moves -> 1
         layers[1].fill_(board.fullmove_number)
         # P1 and P2 castling -> 4
@@ -139,13 +139,15 @@ class CommentaryDataset(Dataset):
         current_board, current_eval = chess.Board(raw_data[1][0]), raw_data[1][1]
         past_boards = [chess.Board(x[0]) for x in raw_data[0]]
         past_evals = [x[1] for x in raw_data[0]]
+        mirrored = False
         if current_board.turn == chess.BLACK:
+            mirrored = True
             current_board = current_board.mirror()
             past_boards = [x.mirror() for x in past_boards]
             current_eval = -current_eval
             past_evals = [-x for x in past_evals]
 
-        answer_board[-STATE_SIZE:, :, :] = self.__get_state_features(current_board)
+        answer_board[-STATE_SIZE:, :, :] = self.__get_state_features(current_board, mirrored)
         answer_board[-STATE_SIZE - MOVE_SIZE:-STATE_SIZE, :, :] = self.__get_all_move_features(current_board)
         answer_board[-STATE_SIZE - POSITIONAL_SIZE - MOVE_SIZE:-STATE_SIZE - MOVE_SIZE, :,
         :] = self.__get_positional_features(current_board, current_eval)
