@@ -17,7 +17,7 @@ from utils.configs import DataConfig, ModelConfig, Optimizers, TrainConfig, Shar
 from data.CommentaryDataset import CommentaryDataset
 from data.CommentaryDataloader import get_commentary_dataloader
 from typing import *
-from model.metrics import get_loss
+from model.metrics import get_loss, BLEU
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -44,6 +44,7 @@ def train(
 
     to_predict = [test_ds[i] for i in range(train_config['predict_sentences'])]
     to_predict_metadata = [test_ds.get_raw_data(i) for i in range(train_config['predict_sentences'])]
+    test_bleu = BLEU([predictor.tokens_to_string(entry[1]) for entry in test_ds])
 
     val_checkpoint = None
     train_checkpoint = None
@@ -68,18 +69,22 @@ def train(
 
         print(f"Epoch {epoch+1}/{train_config['num_epochs']}: train_loss: {train_loss}, val_loss: {val_loss}")
 
-        wandb_table = None if not train_config['with_wandb'] else wandb.Table(["past_board", "past_eval", "current_board", "current_eval", "actual_text", "predicted_text"])
+        wandb_table = None if not train_config['with_wandb'] else wandb.Table(["past_board", "past_eval", "current_board", "current_eval", "actual_text", "predicted_text", "bleu score"])
+        mean_test_bleu = 0
         # predictions
         for ((X_board, y_tokens), (current_board, past_board, current_eval, past_eval)) in zip(to_predict, to_predict_metadata):
             predicted_text = predictor.predict(model, X_board.to(device), '', 1024, device)
             actual_text = predictor.tokens_to_string(y_tokens)
+            bleu_score = test_bleu(predicted_text)
+            mean_test_bleu += bleu_score
             print("=" * 100)
             print(f"Past board {None if past_board is None else str(chess.Board(past_board))}")
             print(f"Past evaluation {0 if past_eval is None else past_eval}")
             print(f"Current board {str(chess.Board(current_board))}")
             print(f"Current evaluation {current_eval}")
-            print(f"Actual prediction {actual_text}")
-            print(f"Predicted text {predicted_text}")
+            print(f"Actual text: {actual_text}")
+            print(f"Predicted text: {predicted_text}")
+            print(f"BLEU score: {bleu_score}")
             print("=" * 100)
             if train_config['with_wandb']:
                 wandb_table.add_data(
@@ -88,13 +93,16 @@ def train(
                     wandb.Image(Image.open(BytesIO(svg2png(chess.svg.board(chess.Board(current_board))))).convert('RGBA')),
                     current_eval,
                     actual_text,
-                    predicted_text
+                    predicted_text,
+                    bleu_score
                 )
+        mean_test_bleu /= len(to_predict)
         if train_config['with_wandb']:
             wandb.log({
                 'train_loss': train_loss,
                 'val_loss': val_loss,
-                'predictions': wandb_table
+                'predictions': wandb_table,
+                "mean_bleu_score": mean_test_bleu
             })
             train_checkpoint(model, epoch, train_loss)
             val_checkpoint(model, epoch, val_loss)
