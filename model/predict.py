@@ -18,5 +18,5 @@ class Predictor:
         tokens = [self.__sp.bos_id()] + tokens
         tokens = torch.Tensor(tokens).unsqueeze(0).int().to(device)
         model.eval()
-        tokens = model.generate(X_board.unsqueeze(0), tokens, max_new_tokens)
+        tokens = model.generate(X_board.unsqueeze(0), tokens, max_new_tokens, device)
         return self.tokens_to_string(tokens)
