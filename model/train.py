@@ -69,16 +69,14 @@ def train(
 
         print(f"Epoch {epoch+1}/{train_config['num_epochs']}: train_loss: {train_loss}, val_loss: {val_loss}")
 
-        wandb_table = None if not train_config['with_wandb'] else wandb.Table(["past_board", "past_eval", "current_board", "current_eval", "actual_text", "predicted_text", "bleu-2", "bleu-4"])
-        mean_test_bleu_2 = 0
-        mean_test_bleu_4 = 0
+        wandb_table = None if not train_config['with_wandb'] else wandb.Table(["past_board", "past_eval", "current_board", "current_eval", "actual_text", "predicted_text", "bleu score"])
+        mean_test_bleu = 0
         # predictions
         for ((X_board, y_tokens), (current_board, past_board, current_eval, past_eval)) in zip(to_predict, to_predict_metadata):
             predicted_text = predictor.predict(model, X_board.to(device), '', 1024, device)
             actual_text = predictor.tokens_to_string(y_tokens)
-            bleu_score_2, bleu_score_4 = test_bleu(predicted_text)
-            mean_test_bleu_2 += bleu_score_2
-            mean_test_bleu_4 += bleu_score_4
+            bleu_score = test_bleu(predicted_text)
+            mean_test_bleu += bleu_score
             print("=" * 100)
             print(f"Past board {None if past_board is None else str(chess.Board(past_board))}")
             print(f"Past evaluation {0 if past_eval is None else past_eval}")
@@ -86,8 +84,7 @@ def train(
             print(f"Current evaluation {current_eval}")
             print(f"Actual text: {actual_text}")
             print(f"Predicted text: {predicted_text}")
-            print(f"BLEU-2 score: {bleu_score_2}")
-            print(f"BLEU-4 score: {bleu_score_4}")
+            print(f"BLEU score: {bleu_score}")
             print("=" * 100)
             if train_config['with_wandb']:
                 wandb_table.add_data(
@@ -97,18 +94,15 @@ def train(
                     current_eval,
                     actual_text,
                     predicted_text,
-                    bleu_score_2,
-                    bleu_score_4
+                    bleu_score
                 )
-        mean_test_bleu_2 /= len(to_predict)
-        mean_test_bleu_4 /= len(to_predict)
+        mean_test_bleu /= len(to_predict)
         if train_config['with_wandb']:
             wandb.log({
                 'train_loss': train_loss,
                 'val_loss': val_loss,
                 'predictions': wandb_table,
-                "mean_bleu_score_2": mean_test_bleu_2,
-                "mean_bleu_score_4": mean_test_bleu_4
+                "mean_bleu_score": mean_test_bleu
             })
             train_checkpoint(model, epoch, train_loss)
             val_checkpoint(model, epoch, val_loss)
