@@ -57,6 +57,7 @@ def train(
         for batch in train_dl:
             optimizer.zero_grad()
             (X_board, X_text, y_sequence, pad_mask) = batch
+            (X_board, X_text, y_sequence, pad_mask) = (X_board.to(device), X_text.to(device), y_sequence.to(device), pad_mask.to(device))
             _, loss = model(X_board, X_text, pad_mask, y_sequence)
             train_losses.append(loss.item())
             loss.backward()
