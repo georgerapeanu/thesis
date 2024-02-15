@@ -10,10 +10,10 @@ import wandb
 from PIL import Image
 from cairosvg import svg2png
 
-from model.model import Model
+from model.model import Model, ModelResidualEncoder, ResidualEncoder
 from model.model_checkpoint import ModelCheckpoint
 from model.predict import Predictor
-from utils.configs import DataConfig, ModelConfig, Optimizers, TrainConfig, SharedConfig
+from utils.configs import DataConfig, ModelConfig, Optimizers, TrainConfig, SharedConfig, Models
 from data.CommentaryDataset import CommentaryDataset
 from data.CommentaryDataloader import get_commentary_dataloader
 from typing import *
@@ -32,11 +32,11 @@ def train(
         val_dl: torch.utils.data.DataLoader,
         test_ds: CommentaryDataset,
         predictor: Predictor,
-        model: Optional[Model] = None
+        model: Optional[Model|ModelResidualEncoder] = None
 ) -> Model:
 
     if model is None:
-        model = Model(model_config, shared_config)
+        model = Model(model_config, shared_config) if model_config['name'] == Models.MODEL else ModelResidualEncoder(model_config, shared_config)
 
     model = model.to(device)
 

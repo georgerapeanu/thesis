@@ -39,7 +39,13 @@ class Optimizers(enum.Enum):
     SGD = 1
 
 
+class Models(enum.Enum):
+    MODEL = 0
+    MODEL_RESIDUAL_ENCODER = 1
+
+
 class ModelConfig(TypedDict):
+    name: Models
     text_embedding_size: int
     conv_modules_count: int
     transformer_blocks: int
@@ -61,6 +67,7 @@ class TrainConfig(TypedDict):
 
 
 class WandbConfig(TypedDict):
+    model_name: str
     text_embedding_size: int
     conv_modules_count: int
     transformer_blocks: int

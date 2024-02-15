@@ -48,24 +48,44 @@ class PositionalEncoding2D(nn.Module):
         return self.Dropout(x + self.pe[:x.size(1), :x.size(2)])
 
 
-class ResidualBlock(nn.Module):
+class DepthwiseResidualBlock(nn.Module):
     def __init__(self, in_channels: int, intermediary_channels: int):
-        super(ResidualBlock, self).__init__()
+        super(DepthwiseResidualBlock, self).__init__()
         self.residual_layer = nn.Sequential(
             nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=3, padding='same', bias=True, groups=in_channels),
             nn.Conv2d(in_channels=in_channels, out_channels=intermediary_channels, kernel_size=1, padding='same', bias=False),
+            nn.BatchNorm2d(intermediary_channels),
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=intermediary_channels, out_channels=intermediary_channels, kernel_size=3, padding='same', bias=True, groups=intermediary_channels),
             nn.Conv2d(in_channels=intermediary_channels, out_channels=in_channels, kernel_size=1, padding='same', bias=False),
-            nn.ReLU(inplace=True)
-        )
-        self.norm = nn.Sequential(
             nn.BatchNorm2d(in_channels),
+        )
+        self.final_step = nn.Sequential(
+            nn.ReLU(inplace=True),
             nn.Dropout(p=0.1)
         )
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
-        return self.norm(self.residual_layer(X) + X)
+        return self.final_step(self.residual_layer(X) + X)
+
+class ResidualBlock(nn.Module):
+    def __init__(self, in_channels: int, intermediary_channels: int):
+        super(ResidualBlock, self).__init__()
+        self.residual_layer = nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=intermediary_channels, kernel_size=3, padding='same', bias=False),
+            nn.BatchNorm2d(intermediary_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=intermediary_channels, out_channels=in_channels, kernel_size=3, padding='same', bias=False),
+            nn.BatchNorm2d(in_channels),
+        )
+        self.final_step = nn.Sequential(
+            nn.ReLU(inplace=True),
+            nn.Dropout(p=0.1)
+        )
+
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
+        return self.final_step(self.residual_layer(X) + X)
+
 
 
 class EncoderBlock(nn.Module):
@@ -132,7 +152,7 @@ class Model(nn.Module):
         super(Model, self).__init__()
         self.board_preparation = nn.Sequential(
             nn.Conv2d(in_channels=config['board_in_channels'], out_channels=config['board_embedding_size'], kernel_size=1, padding=0, bias=True),
-            *[ResidualBlock(in_channels=config['board_embedding_size'], intermediary_channels=config['board_intermediary_channels']) for _ in range(config['conv_modules_count'])]
+            *[DepthwiseResidualBlock(in_channels=config['board_embedding_size'], intermediary_channels=config['board_intermediary_channels']) for _ in range(config['conv_modules_count'])]
         )
 
         self.emb = torch.nn.Embedding(num_embeddings=shared_config['vocab_size'], embedding_dim=config['text_embedding_size'])
@@ -164,6 +184,89 @@ class Model(nn.Module):
         for encoder, decoder in zip(self.encoders, self.decoders):
             X_board = encoder(X_board)
             X_text = decoder(X_board, X_text, padding_mask)
+        logits = self.linear(X_text)
+        loss = None
+        if targets is not None:
+            log_logits = -torch.nn.functional.log_softmax(logits, dim=-1)
+            log_logits = log_logits.masked_fill(padding_mask.unsqueeze(-1), 0)
+            loss = torch.gather(log_logits, -1, targets.unsqueeze(-1)).sum() / padding_mask.int().sum()
+
+        return logits, loss
+
+    def generate(self, X_board: torch.Tensor, X_text: torch.Tensor, max_new_tokens: int, device: str, temperature: float = 1.0, do_sample:bool = False) -> torch.Tensor:
+        for _ in range(max_new_tokens):
+            X_text_in = X_text if X_text.size(1) < self.__shared_config['context_length'] else X_text[:, -self.__shared_config['context_length']:]
+            logits, _ = self(X_board, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1).to(device))
+            logits = logits[:, -1, :] / temperature
+            probs = torch.nn.functional.softmax(logits, dim=-1)
+            if do_sample is not None:
+                text_next = torch.multinomial(probs, num_samples=1)
+            else:
+                _, text_next = torch.topk(probs, k=1, dim=-1)
+            X_text = torch.cat([X_text, text_next], dim=1)
+            if text_next == self.__shared_config['eos_id']:
+                break
+        return X_text
+
+
+class ResidualEncoder(nn.Module):
+    def __init__(self, block_count: int, in_channels: int, intermediary_channels: int):
+        super(ResidualEncoder, self).__init__()
+        self.res_layers = torch.nn.Sequential(
+            *[ResidualBlock(in_channels=in_channels, intermediary_channels=intermediary_channels) for _ in range(block_count)],
+            nn.Conv2d(in_channels=in_channels, out_channels=2 * in_channels, kernel_size=1, stride=1, padding=0, bias=False),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.BatchNorm2d(2 * in_channels),
+            nn.ReLU(inplace=True)
+        )
+
+    def forward(self, X_board: torch.Tensor) -> torch.Tensor:
+        return self.res_layers(X_board)
+
+
+class ModelResidualEncoder(torch.nn.Module):
+    def __init__(self, config: ModelConfig, shared_config: SharedConfig):
+        super(ModelResidualEncoder, self).__init__()
+        self.__config = config
+        self.__shared_config = shared_config
+
+        self.emb = torch.nn.Embedding(num_embeddings=shared_config['vocab_size'], embedding_dim=config['text_embedding_size'])
+        self.pe_text = PositionalEncoding1D(shared_config['context_length'], config['text_embedding_size'])
+        self.pe_board = PositionalEncoding2D(config['board_height'], config['board_width'], config['board_embedding_size'])
+
+        self.encoders = nn.ModuleList([
+            nn.Sequential(
+                nn.Conv2d(in_channels=config['board_in_channels'], out_channels=config['board_embedding_size'], kernel_size=1, padding=0, bias=True),
+                nn.BatchNorm2d(config['board_embedding_size']),
+                nn.ReLU(inplace=True)
+            ),
+            *[ResidualEncoder(block_count=config['conv_modules_count'], in_channels=config['board_embedding_size'] * 2 ** i, intermediary_channels=config['board_intermediary_channels'] * 2 ** i) for i in range(config['transformer_blocks'] - 1)]
+        ])
+
+        self.decoders = nn.ModuleList([
+            DecoderBlock(
+                ff_inner_channels=config['ff_inner_channels'],
+                num_heads=config['num_heads'],
+                decoder_embed_dims=config['text_embedding_size'],
+                encoder_embed_dims=config['board_embedding_size'] * 2 ** i,
+                max_length=shared_config['context_length'])
+            for i in range(config['transformer_blocks'])
+        ])
+
+        self.linear = nn.Linear(in_features=config['text_embedding_size'], out_features=shared_config['vocab_size'])
+
+    def forward(self, X_board: torch.Tensor, X_text: torch.Tensor, padding_mask: torch.Tensor, targets: Optional[torch.Tensor] = None):
+        X_text = self.emb(X_text)
+        X_text = self.pe_text(X_text)
+
+        for i, (encoder, decoder) in enumerate(zip(self.encoders, self.decoders)):
+            X_board = encoder(X_board)
+            if i == 0:
+                X_board = X_board.permute(0, 2, 3, 1)
+                X_board = self.pe_board(X_board).permute(0, 3, 1, 2)
+            b, ch, _, _ = X_board.size()
+            X_text = decoder(X_board.permute(0, 2, 3, 1).view(b, -1, ch), X_text, padding_mask) #test adding pe at each step
+
         logits = self.linear(X_text)
         loss = None
         if targets is not None:
