@@ -236,7 +236,7 @@ class ModelResidualEncoder(torch.nn.Module):
 
         self.encoders = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(in_channels=config['board_in_channels'], out_channels=config['board_embedding_size'], kernel_size=1, padding=0, bias=True),
+                nn.Conv2d(in_channels=config['board_in_channels'], out_channels=config['board_embedding_size'], kernel_size=1, padding='same', bias=True),
                 nn.BatchNorm2d(config['board_embedding_size']),
                 nn.ReLU(inplace=True)
             ),
