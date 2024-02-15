@@ -18,7 +18,9 @@ from data.CommentaryDataset import CommentaryDataset
 from data.CommentaryDataloader import get_commentary_dataloader
 from typing import *
 from model.metrics import get_loss
+import random
 
+random.seed(0)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
@@ -42,8 +44,9 @@ def train(
         torch.optim.Adam(model.parameters(), lr=train_config['lr'])) if train_config['optimizer'] == Optimizers.ADAM \
         else torch.optim.SGD(model.parameters(), lr=train_config['lr'])
 
-    to_predict = [test_ds[i] for i in range(train_config['predict_sentences'])]
-    to_predict_metadata = [test_ds.get_raw_data(i) for i in range(train_config['predict_sentences'])]
+    choices = random.sample(range(len(test_ds)), train_config['predict_sentences'])
+    to_predict = [test_ds[i] for i in choices]
+    to_predict_metadata = [test_ds.get_raw_data(i) for i in choices]
 
     val_checkpoint = None
     train_checkpoint = None

@@ -52,10 +52,10 @@ class ResidualBlock(nn.Module):
     def __init__(self, in_channels: int, intermediary_channels: int):
         super(ResidualBlock, self).__init__()
         self.residual_layer = nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=3, padding='same', bias=False, groups=in_channels),
+            nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=3, padding='same', bias=True, groups=in_channels),
             nn.Conv2d(in_channels=in_channels, out_channels=intermediary_channels, kernel_size=1, padding='same', bias=False),
             nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=intermediary_channels, out_channels=intermediary_channels, kernel_size=3, padding='same', bias=False, groups=intermediary_channels),
+            nn.Conv2d(in_channels=intermediary_channels, out_channels=intermediary_channels, kernel_size=3, padding='same', bias=True, groups=intermediary_channels),
             nn.Conv2d(in_channels=intermediary_channels, out_channels=in_channels, kernel_size=1, padding='same', bias=False),
             nn.ReLU(inplace=True)
         )
