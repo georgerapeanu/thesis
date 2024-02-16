@@ -10,7 +10,7 @@ import wandb
 from PIL import Image
 from cairosvg import svg2png
 
-from model.model import Model, ModelResidualEncoder, ResidualEncoder
+from model.commentary_models import Model, ModelResidualEncoder, ResidualEncoder
 from model.model_checkpoint import ModelCheckpoint
 from model.predict import Predictor
 from utils.configs import DataConfig, ModelConfig, Optimizers, TrainConfig, SharedConfig, Models
