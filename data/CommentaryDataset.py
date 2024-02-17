@@ -31,14 +31,25 @@ class CommentaryDataset(Dataset):
         self.__data = []
 
         for filename in os.listdir(os.path.join(self.__config['data_path'], self.__config['split'])):
-            local_data = pl.read_parquet(os.path.join(self.__config['data_path'], self.__config['split'], filename)).rows()
+            local_data = pl.read_parquet(os.path.join(self.__config['data_path'], self.__config['split'], filename)).rows(named=True)
             past_boards = []
             for row in local_data:
-                past_boards.append((row[0], row[3]))
-                current_board = (row[1], row[4])
-                if len(row[2].strip()) == 0:
+                past_boards.append((row['past_board'], row['past_strength']))
+                current_board = (row['current_board'], row['current_strength'])
+
+                if len(row['commentary'].strip()) == 0:
                     continue
-                tokens = [self.__sp.bos_id()] + self.__sp.encode(row[2].strip().replace('\n', '<n>')) + [self.__sp.eos_id()]
+                take = False
+
+                for type in shared_config['target_types']:
+                    if row[f"is_type_{type}"]:
+                        take = True
+                        break
+
+                if not take:
+                    continue
+
+                tokens = [self.__sp.bos_id()] + self.__sp.encode(row['commentary'].strip().replace('\n', '<n>')) + [self.__sp.eos_id()]
                 if len(tokens) > shared_config['context_length']:
                     for i in range(0, len(tokens) - 1 - shared_config['context_length'], config['stride_big_sequences']):
                         self.__raw_data.append((past_boards[max(0, len(past_boards) - config['past_boards']):], current_board, tokens[i:i + shared_config['context_length'] + 1]))

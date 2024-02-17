@@ -1,35 +1,33 @@
+import os.path
+import traceback
+
 import polars as pl
 import random
 
-random.seed(0)
 
 TYPES = ['MoveDesc', 'MoveQuality', 'Comparative', 'Strategy', 'Context', 'General']
-ANNOTATE_COUNT = 2000
 
 if __name__ == '__main__':
-    samples = random.sample(list(iter(open("../artifacts/commentaries.txt", "r"))), ANNOTATE_COUNT)
+    commentaries = (list(iter(open("../artifacts/commentaries.txt", "r"))))
 
     annotated_samples = []
-    for i, sample in enumerate(samples):
-        print(f"{i}/{ANNOTATE_COUNT}: {sample}")
-        print(f"Choose type {list(enumerate(TYPES))}")
-        chosen_type = None
-        while chosen_type is None:
-            try:
-                chosen_type = int(input())
-            except Exception:
-                pass
-        annotated_samples.append({
-            'commentary': sample,
-            'type': chosen_type,
-            'type_str': TYPES[chosen_type]
-        })
+    if os.path.exists("../artifacts/commentary_types.parquet"):
+        annotated_samples = pl.read_parquet("../artifacts/commentary_types.parquet").rows(named=True)
 
-    pl.DataFrame(annotated_samples).write_parquet("../artifacts/commentary_types.parquet")
+    try:
+        while True:
+            sample = random.choice(commentaries)
+            print(f"{len(annotated_samples)}: {sample}")
+            print(f"Choose type {list(enumerate(TYPES))}")
+            chosen_types = []
+            while len(chosen_types) == 0 or len(list(filter(lambda x: x < 0 or x >= len(TYPES), chosen_types))) > 0:
+                chosen_types = list(map(lambda x: int(x), [*input()]))
 
-#TODO review last 3 categories
-# I think a lot of context got put into strategy, and vice versa
-# also, a lot of general and context are swapped
-# context should contain summaries about the game, thats what makes it different. maybe openings too(definetly)
-# Move quality and comparative are also mixed
-# Comparative and strategy might also be mixed
+            annotated_samples.append({
+                'commentary': sample,
+                'type': ",".join(map(lambda x: str(x), chosen_types)),
+                'type_str': ",".join([TYPES[x] for x in chosen_types])
+            })
+    except Exception:
+        traceback.print_exc()
+        pl.DataFrame(annotated_samples).write_parquet("../artifacts/commentary_types.parquet")

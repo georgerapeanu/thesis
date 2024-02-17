@@ -20,6 +20,7 @@ class SharedConfig(TypedDict):
     bos_id: int
     pad_id: int
     vocab_size: int
+    target_types: List[int]
 
 
 class DataConfig(TypedDict):

@@ -87,7 +87,7 @@ def train(
             if train_config['with_wandb']:
                 wandb_table.add_data(
                     wandb.Image(Image.open(BytesIO(svg2png(chess.svg.board(None if past_board is None else chess.Board(past_board))))).convert('RGBA')),
-                    {0 if past_eval is None else past_eval},
+                    (0 if past_eval is None else past_eval),
                     wandb.Image(Image.open(BytesIO(svg2png(chess.svg.board(chess.Board(current_board))))).convert('RGBA')),
                     current_eval,
                     actual_text,
