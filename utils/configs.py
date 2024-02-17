@@ -86,3 +86,4 @@ class WandbConfig(TypedDict):
     stride_big_sequences: int
     samples_per_train_epoch: int
     predict_sentences: int
+    target_types: List[int]

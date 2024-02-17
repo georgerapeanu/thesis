@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-import model.modules.ResidualBlock as ResidualBlock
+from model.modules.ResidualBlock import ResidualBlock
+
 
 class ResidualEncoder(nn.Module):
     def __init__(self, block_count: int, in_channels: int, intermediary_channels: int):
