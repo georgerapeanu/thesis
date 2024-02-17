@@ -17,7 +17,7 @@ class PositionalEncoding2D(nn.Module):
         pe[:, :, 0:2 * len(div_term):2] = torch.sin(position_x * div_term)
         pe[:, :, 1:2 * len(div_term):2] = torch.cos(position_x * div_term)
         pe[:, :, 2 * len(div_term)::2] = torch.sin(position_y * div_term)
-        pe[:, :, 2 * len(div_term)::2] = torch.cos(position_y * div_term)
+        pe[:, :, 2 * len(div_term) + 1::2] = torch.cos(position_y * div_term)
         self.register_buffer('pe', pe)
         self.Dropout = nn.Dropout(p=0.1)
 
