@@ -21,7 +21,9 @@ class Model(nn.Module):
     def __init__(self, config: ModelConfig, shared_config: SharedConfig):
         super(Model, self).__init__()
         self.board_preparation = nn.Sequential(
-            nn.Conv2d(in_channels=config['board_in_channels'], out_channels=config['board_embedding_size'], kernel_size=1, padding=0, bias=True),
+            nn.Conv2d(in_channels=config['board_in_channels'], out_channels=config['board_embedding_size'], kernel_size=1, padding=0, bias=False),
+            nn.BatchNorm2d(config['board_embedding_size']),
+            nn.ReLU(inplace=True),
             *[DepthwiseResidualBlock(in_channels=config['board_embedding_size'], intermediary_channels=config['board_intermediary_channels']) for _ in range(config['conv_modules_count'])]
         )
 
