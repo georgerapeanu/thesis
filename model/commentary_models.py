@@ -201,11 +201,8 @@ class MultipleHeadsModel(nn.Module):
                 X_text: torch.Tensor,
                 padding_mask: torch.Tensor,
                 targets: Optional[torch.Tensor] = None,
-                is_type: Optional[torch.Tensor] = None, #shape (b, types)
-                device: Optional[torch.Tensor] = None
+                is_type: Optional[torch.Tensor] = None #shape (b, types)
         ):
-        if device is None:
-            device = 'cuda' if torch.cuda.is_available() else 'cpu'
         X_board = self.board_preparation(X_board)
         X_board = X_board.permute(0, 2, 3, 1)
         b, _, _, ch = X_board.shape
@@ -227,7 +224,7 @@ class MultipleHeadsModel(nn.Module):
             loss = torch.Tensor([0])
             for (type, depth) in self.__config['target_types_and_depth']:
                 idx = is_type[:, type]
-                my_logits = self.linears[type](decoder_outputs[depth][idx].to(device))
+                my_logits = self.linears[type](decoder_outputs[depth][idx])
                 my_log_logits = -torch.nn.functional.log_softmax(my_logits, dim=-1)
                 my_log_logits = my_log_logits.masked_fill(padding_mask[idx].unsqueeze(-1), 0)
                 if count > 0:
