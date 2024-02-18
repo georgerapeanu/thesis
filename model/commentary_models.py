@@ -219,7 +219,7 @@ class MultipleHeadsModel(nn.Module):
 
         final_logits = self.final_linear(X_text)
         loss = None
-        count = (padding_mask == False).int().sum()
+        count = (padding_mask == False).int().sum().item()
         if targets is not None:
             loss = torch.Tensor([0])
             for (type, depth) in self.__config['target_types_and_depth']:
