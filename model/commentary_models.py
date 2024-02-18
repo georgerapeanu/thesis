@@ -203,6 +203,11 @@ class MultipleHeadsModel(nn.Module):
                 targets: Optional[torch.Tensor] = None,
                 types: Optional[torch.Tensor] = None
         ):
+        X_board = self.board_preparation(X_board)
+        X_board = X_board.permute(0, 2, 3, 1)
+        b, _, _, ch = X_board.shape
+        X_board = self.pe_board(X_board).view(b, -1, ch)
+
         X_text = self.emb(X_text)
         X_text = self.pe_text(X_text)
 
