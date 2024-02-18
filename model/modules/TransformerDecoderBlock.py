@@ -31,7 +31,7 @@ class TransformerDecoderBlock(nn.Module):
         self.dropout = nn.Dropout(p=0.1)
 
     def forward(self, encoder_output: torch.Tensor, X: torch.Tensor, pad_mask: torch.Tensor) -> torch.Tensor:
-        X = self.layer_norm1(X + self.dropout(self.mha1(query=X, key=X, value=X, need_weights=False, key_padding_mask=pad_mask, attn_mask=self.attn_mask[:X.size(1), :X.size(1)], is_casual=True)[0]))
+        X = self.layer_norm1(X + self.dropout(self.mha1(query=X, key=X, value=X, need_weights=False, key_padding_mask=pad_mask, attn_mask=self.attn_mask[:X.size(1), :X.size(1)], is_causal=True)[0]))
         X = self.layer_norm2(X + self.dropout(self.mha2(query=X, key=encoder_output, value=encoder_output, need_weights=False)[0]))
         X = self.layer_norm3(X + self.dropout(self.feed_forward(X)))
         return X
