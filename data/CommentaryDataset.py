@@ -11,6 +11,8 @@ import polars as pl
 from torch.nn.utils.rnn import pad_sequence
 from utils.configs import DataConfig, SharedConfig
 import sentencepiece
+from data.create_data_type_train_file_cli import TYPES
+
 FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
 INV_FILES = {'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, 'f': 5, 'g': 6, 'h': 7}
 ROWS = ['1', '2', '3', '4', '5', '6', '7', '8']
@@ -41,9 +43,11 @@ class CommentaryDataset(Dataset):
                     continue
                 take = False
 
-                for type in shared_config['target_types']:
+                types = torch.zeros(len(TYPES), dtype=torch.bool)
+                for i, type in enumerate(shared_config['target_types']):
                     if row[f"is_type_{type}"]:
                         take = True
+                        types[i] = True
                         break
 
                 if not take:
@@ -52,11 +56,21 @@ class CommentaryDataset(Dataset):
                 tokens = [self.__sp.bos_id()] + self.__sp.encode(row['commentary'].strip().replace('\n', '<n>')) + [self.__sp.eos_id()]
                 if len(tokens) > shared_config['context_length']:
                     for i in range(0, len(tokens) - 1 - shared_config['context_length'], config['stride_big_sequences']):
-                        self.__raw_data.append((past_boards[max(0, len(past_boards) - config['past_boards']):], current_board, tokens[i:i + shared_config['context_length'] + 1]))
+                        self.__raw_data.append((
+                            past_boards[max(0, len(past_boards) - config['past_boards']):],
+                            current_board,
+                            tokens[i:i + shared_config['context_length'] + 1],
+                            types
+                        ))
                         if self.__config['in_memory']:
                             self.__data.append(self.raw_data_to_data(self.__raw_data[-1]))
                 else:
-                    self.__raw_data.append((past_boards[max(0, len(past_boards) - config['past_boards']):], current_board, tokens))
+                    self.__raw_data.append((
+                        past_boards[max(0, len(past_boards) - config['past_boards']):],
+                        current_board,
+                        tokens,
+                        types
+                    ))
                     if self.__config['in_memory']:
                         self.__data.append(self.raw_data_to_data(self.__raw_data[-1]))
 
@@ -165,9 +179,9 @@ class CommentaryDataset(Dataset):
                 self.__get_positional_features(past_boards[-i], past_evals[-i])
             )
 
-        return answer_board.float(), torch.tensor(raw_data[2])
+        return answer_board.float(), torch.tensor(raw_data[2]), raw_data[3]
 
-    def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         if self.__config['in_memory']:
             return self.__data[idx]
         else:

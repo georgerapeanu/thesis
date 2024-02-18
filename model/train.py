@@ -64,9 +64,12 @@ def train(
         train_losses = []
         for batch in train_dl:
             optimizer.zero_grad()
-            (X_board, X_text, y_sequence, pad_mask) = batch
-            (X_board, X_text, y_sequence, pad_mask) = (X_board.to(device), X_text.to(device), y_sequence.to(device), pad_mask.to(device))
-            _, loss = model(X_board, X_text, pad_mask, y_sequence)
+            (X_board, X_text, y_sequence, pad_mask, types) = batch
+            (X_board, X_text, y_sequence, pad_mask, types) = (X_board.to(device), X_text.to(device), y_sequence.to(device), pad_mask.to(device), types.to(device))
+            if model_config['name'] == Models.MODEL_MULTIPLE_HEADS:
+                _, loss = model(X_board, X_text, pad_mask, y_sequence, types)
+            else:
+                _, loss = model(X_board, X_text, pad_mask, y_sequence)
             train_losses.append(loss.item())
             loss.backward()
             optimizer.step()
@@ -78,7 +81,7 @@ def train(
 
         wandb_table = None if not train_config['with_wandb'] else wandb.Table(["past_board", "past_eval", "current_board", "current_eval", "actual_text", "predicted_text"])
         # predictions
-        for ((X_board, y_tokens), (current_board, past_board, current_eval, past_eval)) in zip(to_predict, to_predict_metadata):
+        for ((X_board, y_tokens, _), (current_board, past_board, current_eval, past_eval)) in zip(to_predict, to_predict_metadata):
             predicted_text = predictor.predict(model, X_board.to(device), '', 1024, device)
             actual_text = predictor.tokens_to_string(y_tokens)
             print("=" * 100)

@@ -201,7 +201,7 @@ class MultipleHeadsModel(nn.Module):
                 X_text: torch.Tensor,
                 padding_mask: torch.Tensor,
                 targets: Optional[torch.Tensor] = None,
-                types: Optional[torch.Tensor] = None
+                is_type: Optional[torch.Tensor] = None #shape (b, types)
         ):
         X_board = self.board_preparation(X_board)
         X_board = X_board.permute(0, 2, 3, 1)
@@ -222,11 +222,13 @@ class MultipleHeadsModel(nn.Module):
         if targets is not None:
             loss = torch.Tensor([0])
             for (type, depth) in self.__config['target_types_and_depth']:
-                idx = (types == type)
+                idx = is_type[:, type]
                 my_logits = self.linears[type](decoder_outputs[depth][idx])
                 my_log_logits = -torch.nn.functional.log_softmax(my_logits, dim=-1)
                 my_log_logits = my_log_logits.masked_fill(padding_mask[idx].unsqueeze(-1), 0)
-                loss += torch.gather(my_log_logits, -1, targets[idx].unsqueeze(-1)).sum() / (padding_mask[idx] == False).int().sum()
+                count = (padding_mask[idx] == False).int().sum()
+                if count > 0:
+                    loss += torch.gather(my_log_logits, -1, targets[idx].unsqueeze(-1)).sum() / count
             log_logits = -torch.nn.functional.log_softmax(final_logits, dim=-1)
             log_logits = log_logits.masked_fill(padding_mask.unsqueeze(-1), 0)
             loss += torch.gather(log_logits, -1, targets.unsqueeze(-1)).sum() / (padding_mask == False).int().sum()

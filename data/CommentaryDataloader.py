@@ -19,10 +19,11 @@ def get_commentary_dataloader(config: DataConfig, shared_config: SharedConfig) -
     def collate_fn(data):
         board_data = torch.stack(list(map(lambda x: x[0], data)))
         sequences = pad_sequence(list(map(lambda x: x[1], data)), batch_first=True, padding_value=shared_config['pad_id'])
+        types = torch.stack(list(map(lambda x: x[2], data)))
         X_sequence = sequences[:, :-1]
         y_sequence = sequences[:, 1:]
         next_pad_mask = (y_sequence == shared_config['pad_id'])
-        return board_data, X_sequence, y_sequence, next_pad_mask
+        return board_data, X_sequence, y_sequence, next_pad_mask, types
 
     if config['dl_samples'] is not None:
         dl = DataLoader(
