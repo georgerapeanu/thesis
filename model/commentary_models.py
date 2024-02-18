@@ -189,10 +189,10 @@ class MultipleHeadsModel(nn.Module):
             for i in range(config['transformer_blocks'])
         ])
 
-        self.linears = [
+        self.linears = nn.ModuleList([
             nn.Linear(in_features=config['text_embedding_size'], out_features=shared_config['vocab_size'])
             for _ in range(len(config['target_types_and_depth']))
-        ]
+        ])
 
         self.final_linear = nn.Linear(in_features=config['text_embedding_size'], out_features=shared_config['vocab_size'])
 
