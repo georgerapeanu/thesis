@@ -59,6 +59,19 @@ class ModelConfig(TypedDict):
     num_heads: int
 
 
+class MultiHeadConfig(TypedDict):
+    text_embedding_size: int
+    transformer_blocks: int
+    board_intermediary_channels: int
+    board_in_channels: int
+    board_height: int
+    board_width: int
+    board_embedding_size: int
+    ff_inner_channels: int
+    num_heads: int
+    target_types_and_depth: List[Tuple[int, int]]
+
+
 class TrainConfig(TypedDict):
     optimizer: Optimizers
     lr: int
