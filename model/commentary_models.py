@@ -221,14 +221,13 @@ class MultipleHeadsModel(nn.Module):
         loss = None
         count = (padding_mask == False).int().sum().item()
         if targets is not None:
-            loss = torch.Tensor([0])
+            loss = torch.Tensor([0], device=final_logits.device)
             for (type, depth) in self.__config['target_types_and_depth']:
                 idx = is_type[:, type]
                 my_logits = self.linears[type](decoder_outputs[depth][idx])
                 my_log_logits = -torch.nn.functional.log_softmax(my_logits, dim=-1)
                 my_log_logits = my_log_logits.masked_fill(padding_mask[idx].unsqueeze(-1), 0)
-                if count > 0:
-                    loss += torch.gather(my_log_logits, -1, targets[idx].unsqueeze(-1)).sum() / count
+                loss += torch.gather(my_log_logits, -1, targets[idx].unsqueeze(-1)).sum() / count
             log_logits = -torch.nn.functional.log_softmax(final_logits, dim=-1)
             log_logits = log_logits.masked_fill(padding_mask.unsqueeze(-1), 0)
             loss += torch.gather(log_logits, -1, targets.unsqueeze(-1)).sum() / count
