@@ -221,7 +221,7 @@ class MultipleHeadsModel(nn.Module):
         loss = None
         count = (padding_mask == False).int().sum().item()
         if targets is not None:
-            loss = torch.Tensor([0], device=final_logits.device)
+            loss = torch.Tensor([0]).to(final_logits.device)
             for (type, depth) in self.__config['target_types_and_depth']:
                 idx = is_type[:, type]
                 my_logits = self.linears[type](decoder_outputs[depth][idx])
