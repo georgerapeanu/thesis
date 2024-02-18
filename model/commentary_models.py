@@ -223,7 +223,7 @@ class MultipleHeadsModel(nn.Module):
             loss = torch.Tensor(0)
             for (type, depth) in self.__config['target_types_and_depth']:
                 idx = (types == type)
-                my_logits = decoder_outputs[depth][idx]
+                my_logits = self.linears[type](decoder_outputs[depth][idx])
                 my_log_logits = -torch.nn.functional.log_softmax(my_logits, dim=-1)
                 my_log_logits = my_log_logits.masked_fill(padding_mask[idx].unsqueeze(-1), 0)
                 loss += torch.gather(my_log_logits, -1, targets.unsqueeze(-1)).sum() / (padding_mask[idx] == False).int().sum()
