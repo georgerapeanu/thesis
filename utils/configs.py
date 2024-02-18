@@ -43,6 +43,7 @@ class Optimizers(enum.Enum):
 class Models(enum.Enum):
     MODEL = 0
     MODEL_RESIDUAL_ENCODER = 1
+    MODEL_MULTIPLE_HEADS = 2
 
 
 class ModelConfig(TypedDict):
@@ -60,6 +61,7 @@ class ModelConfig(TypedDict):
 
 
 class MultiHeadConfig(TypedDict):
+    name: Models
     text_embedding_size: int
     transformer_blocks: int
     board_intermediary_channels: int
@@ -100,3 +102,4 @@ class WandbConfig(TypedDict):
     samples_per_train_epoch: int
     predict_sentences: int
     target_types: List[int]
+    target_types_and_depth: Optional[List[Tuple[int, int]]]

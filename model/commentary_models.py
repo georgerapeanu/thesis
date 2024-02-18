@@ -184,7 +184,7 @@ class MultipleHeadsModel(nn.Module):
                 ff_inner_channels=config['ff_inner_channels'],
                 num_heads=config['num_heads'],
                 decoder_embed_dims=config['text_embedding_size'],
-                encoder_embed_dims=config['board_embedding_size'] * 2 ** i,
+                encoder_embed_dims=config['board_embedding_size'],
                 max_length=shared_config['context_length'])
             for i in range(config['transformer_blocks'])
         ])
@@ -220,13 +220,13 @@ class MultipleHeadsModel(nn.Module):
         final_logits = self.final_linear(X_text)
         loss = None
         if targets is not None:
-            loss = torch.Tensor(0)
+            loss = torch.Tensor([0])
             for (type, depth) in self.__config['target_types_and_depth']:
                 idx = (types == type)
                 my_logits = self.linears[type](decoder_outputs[depth][idx])
                 my_log_logits = -torch.nn.functional.log_softmax(my_logits, dim=-1)
                 my_log_logits = my_log_logits.masked_fill(padding_mask[idx].unsqueeze(-1), 0)
-                loss += torch.gather(my_log_logits, -1, targets.unsqueeze(-1)).sum() / (padding_mask[idx] == False).int().sum()
+                loss += torch.gather(my_log_logits, -1, targets[idx].unsqueeze(-1)).sum() / (padding_mask[idx] == False).int().sum()
             log_logits = -torch.nn.functional.log_softmax(final_logits, dim=-1)
             log_logits = log_logits.masked_fill(padding_mask.unsqueeze(-1), 0)
             loss += torch.gather(log_logits, -1, targets.unsqueeze(-1)).sum() / (padding_mask == False).int().sum()

@@ -10,10 +10,10 @@ import wandb
 from PIL import Image
 from cairosvg import svg2png
 
-from model.commentary_models import Model, ModelResidualEncoder, ResidualEncoder
+from model.commentary_models import Model, ModelResidualEncoder, MultipleHeadsModel
 from model.model_checkpoint import ModelCheckpoint
 from model.predict import Predictor
-from utils.configs import DataConfig, ModelConfig, Optimizers, TrainConfig, SharedConfig, Models
+from utils.configs import DataConfig, ModelConfig, Optimizers, TrainConfig, SharedConfig, Models, MultiHeadConfig
 from data.CommentaryDataset import CommentaryDataset
 from data.CommentaryDataloader import get_commentary_dataloader
 from typing import *
@@ -25,7 +25,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 def train(
-        model_config: ModelConfig,
+        model_config: ModelConfig|MultiHeadConfig,
         train_config: TrainConfig,
         shared_config: SharedConfig,
         train_dl: torch.utils.data.DataLoader,
@@ -36,7 +36,12 @@ def train(
 ) -> Model:
 
     if model is None:
-        model = Model(model_config, shared_config) if model_config['name'] == Models.MODEL else ModelResidualEncoder(model_config, shared_config)
+        if model_config['name'] == Models.MODEL:
+            model = Model(model_config, shared_config)
+        elif model_config['name'] == Models.MODEL_RESIDUAL_ENCODER:
+            model = ModelResidualEncoder(model_config, shared_config)
+        else:
+            model = MultipleHeadsModel(model_config, shared_config)
 
     model = model.to(device)
 
