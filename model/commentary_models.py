@@ -214,11 +214,7 @@ class MultipleHeadsModel(nn.Module):
         decoder_outputs = []
         for i, (encoder, decoder) in enumerate(zip(self.encoders, self.decoders)):
             X_board = encoder(X_board)
-            if i == 0:
-                X_board = X_board.permute(0, 2, 3, 1)
-                X_board = self.pe_board(X_board).permute(0, 3, 1, 2)
-            b, ch, _, _ = X_board.size()
-            X_text = decoder(X_board.permute(0, 2, 3, 1).view(b, -1, ch), X_text, padding_mask) #test adding pe at each step
+            X_text = decoder(X_board, X_text, padding_mask) #test adding pe at each step
             decoder_outputs.append(X_text)
 
         final_logits = self.final_linear(X_text)
