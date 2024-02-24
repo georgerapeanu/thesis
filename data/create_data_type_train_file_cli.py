@@ -8,7 +8,7 @@ import random
 TYPES = ['MoveDesc', 'MoveQuality', 'Comparative', 'Strategy', 'Context', 'General']
 
 if __name__ == '__main__':
-    commentaries = (list(iter(open("../artifacts/commentaries.txt", "r"))))
+    commentaries = (list(iter(open("../artifacts/commentaries_raw.txt", "r"))))
 
     annotated_samples = []
     if os.path.exists("../artifacts/commentary_types.parquet"):

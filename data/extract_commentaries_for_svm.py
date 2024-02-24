@@ -2,7 +2,7 @@ import os
 import polars as pl
 
 if __name__ == '__main__':
-    with open("../artifacts/commentaries.txt", "w") as f:
+    with open("../artifacts/commentaries_raw.txt", "w") as f:
         for filename in os.listdir(os.path.join("../raw_data", "train")):
             try:
                 local_data = pl.read_parquet(os.path.join("../raw_data", "train", filename)).rows()
