@@ -1,0 +1,15 @@
+_target_: model.commentary_models.AlphazeroModelResidualEncoder
+defaults:
+  - /shared@_here_
+board_height: 8
+board_width: 8
+
+#board_embedding_size: int,
+#board_intermediary_channels: int,
+#text_embedding_size: int,
+#ff_inner_channels: int,
+#num_heads: int,
+#transformer_blocks: int,
+#conv_modules_count: int,
+#optimizer: str,
+#lr: float

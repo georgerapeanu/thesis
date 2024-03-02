@@ -2,13 +2,16 @@ import multiprocessing
 import os
 import pickle
 
+import hydra
 import numpy as np
 import polars as pl
 import stockfish
-from utils.configs import EngineConfig
+from hydra.core.hydra_config import HydraConfig
+from omegaconf import DictConfig, OmegaConf
+
 
 class Worker:
-    def __init__(self, config: EngineConfig):
+    def __init__(self, config: DictConfig):
         self.__config = config
         self.__engine = stockfish.Stockfish(self.__config['location'], parameters={
             "Threads": self.__config['threads'],
@@ -16,7 +19,7 @@ class Worker:
             "Minimum Thinking Time": self.__config['minimum_thinking_time']
         })
         self.__engine.set_depth(self.__config['engine_depth'])
-        (self.vectorizer, self.classifiers) = pickle.load(open("../artifacts/svm.p", "rb"))
+        (self.vectorizer, self.classifiers) = pickle.load(open(os.path.join(self.__config['artifacts_path'], "svm.p"), "rb"))
 
     def __evaluation_to_value(self, evaluation):
         if evaluation['type'] == 'cp':
@@ -26,7 +29,8 @@ class Worker:
 
     def __call__(self, file: str):
         try:
-            df = pl.read_parquet(os.path.join(self.__config['raw_data_path'], file))
+            raw_file_path = os.path.join(self.__config['raw_data_path'], file)
+            df = pl.read_parquet(raw_file_path)
             answer = []
             for past_board, current_board, commentary in df.rows():
                 self.__engine.set_fen_position(past_board)
@@ -35,17 +39,22 @@ class Worker:
                 current_strength = self.__evaluation_to_value(self.__engine.get_evaluation())
 
                 vectorized_commentary = self.vectorizer.transform([commentary])
+
+                if len(commentary.strip()) == 0:
+                    continue
+
                 answer.append({
                     k: v for k, v in [
                         ('past_board', past_board),
                         ('current_board', current_board),
                         ('commentary', commentary),
-                        ('past_strength', past_strength), #TODO check 1043 from train since it looks wrong
+                        ('past_strength', past_strength),
                         ('current_strength', current_strength),
                         *[(f"is_type_{i}", self.classifiers[i].predict(vectorized_commentary)[0]) for i in range(len(self.classifiers))]
                     ]
                 })
-            pl.DataFrame(answer).write_parquet(os.path.join(self.__config['processed_data_path'], file))
+            if len(answer) > 0:
+                pl.DataFrame(answer).write_parquet(os.path.join(self.__config['processed_path'], file))
             print(f"Done {file}")
         except pl.exceptions.ComputeError as e:
             pass
@@ -56,27 +65,48 @@ def init_worker(config):
     global worker
     worker = Worker(config)
 
+
 def process(file):
     global worker
     worker(file)
 
-if __name__ == '__main__':
-    config: EngineConfig = {
-        'location': '../artifacts/stockfish-ubuntu-x86-64-avx2',
-        'threads': 4,
-        'hash': 128,
-        'minimum_thinking_time': 1,
-        'raw_data_path': '../raw_data',
-        'processed_data_path': '../processed_data',
-        'engine_depth': 5,
-        'mate_value': 10000
-    }
+
+def process_raw_data(engine_config: DictConfig):
+    # config: EngineConfig = {
+    #     'location': os.path.join(artifacts_path, 'stockfish-ubuntu-x86-64-avx2'),
+    #     'threads': 4,
+    #     'hash': 128,
+    #     'minimum_thinking_time': 1,
+    #     'raw_data_path': raw_data_path,
+    #     'processed_data_path': processed_data_path,
+    #     'engine_depth': 5,
+    #     'mate_value': 10000
+    # }
 
     files = []
 
     for split in ['train', 'test', 'valid']:
-        for file in os.listdir(os.path.join(config['raw_data_path'], split)):
+        for file in os.listdir(os.path.join(engine_config['raw_data_path'], split)):
             files.append(os.path.join(split, file))
 
-    with multiprocessing.Pool(8, initializer=init_worker, initargs=[config]) as p:
+    # init_worker(engine_config)
+    # for file in files:
+    #     process(file)
+
+    with multiprocessing.get_context("spawn").Pool(8, initializer=init_worker, initargs=[engine_config]) as p:
         p.map(process, files)
+
+if __name__ == '__main__':
+    config = {
+        'artifacts_path': "../artifacts",
+        'location': os.path.join("../artifacts", 'stockfish-ubuntu-x86-64-avx2'),
+        'threads': 4,
+        'hash': 128,
+        'minimum_thinking_time': 1,
+        'raw_data_path': "../raw_data",
+        'processed_data_path': "../processed_data",
+        'engine_depth': 5,
+        'mate_value': 10000
+    }
+
+    process_raw_data(config)

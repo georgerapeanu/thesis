@@ -1,10 +1,12 @@
+import os
 import pickle
 
-if __name__ == '__main__':
-    vectorizer, classifiers = pickle.load(open('../artifacts/svm.p', 'rb'))
-    with open("../artifacts/commentaries.txt", "w") as f:
+
+def extract_spm(artifacts_path: str):
+    vectorizer, classifiers = pickle.load(open(os.path.join(artifacts_path, 'svm.p'), 'rb'))
+    with open(os.path.join(artifacts_path, "commentaries.txt"), "w") as f:
         lines = []
-        with open("../artifacts/commentaries_raw.txt") as g:
+        with open(os.path.join(artifacts_path, "commentaries_raw.txt")) as g:
             for line in g:
                 lines.append(line)
         vectorized_lines = vectorizer.transform(lines)

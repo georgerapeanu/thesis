@@ -1,0 +1,3 @@
+defaults:
+  - data: alphazero_style_data_module
+  - ./networks/examples/alphazero_residual_encoder_test@model

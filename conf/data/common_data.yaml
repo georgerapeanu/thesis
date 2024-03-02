@@ -1,0 +1,4 @@
+raw_data_path: ./raw_data
+processed_path: ./processed_data
+artifacts_path: ./artifacts
+pickle_path: ./crawler

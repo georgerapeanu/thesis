@@ -1,7 +1,7 @@
 import sentencepiece
 import torch
 
-from model.commentary_models import Model, ModelResidualEncoder
+from model.commentary_models import AlphazeroTransformerModel, AlphazeroModelResidualEncoder
 from utils.configs import SharedConfig
 
 
@@ -13,7 +13,7 @@ class Predictor:
     def tokens_to_string(self, tokens: torch.Tensor) -> str:
         return self.__sp.decode(tokens.view(-1).tolist()).replace("<n>", "\n")
 
-    def predict(self, model: Model | ModelResidualEncoder, X_board: torch.tensor, text: str, max_new_tokens: int, device: str) -> str:
+    def predict(self, model: AlphazeroTransformerModel | AlphazeroModelResidualEncoder, X_board: torch.tensor, text: str, max_new_tokens: int, device: str) -> str:
         tokens = self.__sp.encode(text.strip().replace('\n', '<n>'))
         tokens = [self.__sp.bos_id()] + tokens
         tokens = torch.Tensor(tokens).unsqueeze(0).int().to(device)

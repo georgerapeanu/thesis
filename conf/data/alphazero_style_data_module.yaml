@@ -1,0 +1,23 @@
+_target_: data.AlphazeroStyleDataModule.AlphazeroStyleDataModule
+force_recrawl: false
+force_reprocess: false
+train_config:
+  split: train
+  in_memory: false
+val_config:
+  split: valid
+  in_memory: true
+test_config:
+  split: train
+  in_memory: false
+
+defaults:
+  - engine_config: default
+  - common_data@_here_
+  - common_data@train_config
+  - common_ds_config@train_config
+  - common_data@val_config
+  - common_ds_config@val_config
+  - common_data@test_config
+  - common_ds_config@test_config
+  - /shared@_here_

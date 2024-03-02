@@ -3,19 +3,18 @@
 import os
 import sentencepiece as spm
 
-VOCAB_SIZE = 1500
 
-if __name__ == '__main__':
+def train_spm(artifacts_path: str, vocab_size: int):
     options = dict(
       # input spec
-      input="../artifacts/commentaries.txt",
+      input=os.path.join(artifacts_path, "commentaries.txt"),
       input_format="text",
       # output spec
-      model_prefix=f"../artifacts/sp{VOCAB_SIZE}", # output filename prefix
+      model_prefix=os.path.join(artifacts_path, f"sp{vocab_size}"), # output filename prefix
       # algorithm spec
       # BPE alg
       model_type="bpe",
-      vocab_size=VOCAB_SIZE,
+      vocab_size=vocab_size,
       # normalization
       normalization_rule_name="identity", # ew, turn off normalization
       remove_extra_whitespaces=False,

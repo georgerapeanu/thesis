@@ -1,0 +1,6 @@
+_target_: model.commentary_models.AlphazeroMultipleHeadsModel
+board_height: 8
+board_width: 8
+defaults:
+  - /shared@_here_
+

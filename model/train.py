@@ -10,7 +10,7 @@ import wandb
 from PIL import Image
 from cairosvg import svg2png
 
-from model.commentary_models import Model, ModelResidualEncoder, MultipleHeadsModel
+from model.commentary_models import AlphazeroTransformerModel, AlphazeroModelResidualEncoder, AlphazeroMultipleHeadsModel
 from model.model_checkpoint import ModelCheckpoint
 from model.predict import Predictor
 from utils.configs import DataConfig, ModelConfig, Optimizers, TrainConfig, SharedConfig, Models, MultiHeadConfig
@@ -32,16 +32,16 @@ def train(
         val_dl: torch.utils.data.DataLoader,
         test_ds: CommentaryDataset,
         predictor: Predictor,
-        model: Optional[Model|ModelResidualEncoder] = None
-) -> Model:
+        model: Optional[AlphazeroTransformerModel | AlphazeroModelResidualEncoder] = None
+) -> AlphazeroTransformerModel:
 
     if model is None:
         if model_config['name'] == Models.MODEL:
-            model = Model(model_config, shared_config)
+            model = AlphazeroTransformerModel(model_config, shared_config)
         elif model_config['name'] == Models.MODEL_RESIDUAL_ENCODER:
-            model = ModelResidualEncoder(model_config, shared_config)
+            model = AlphazeroModelResidualEncoder(model_config, shared_config)
         else:
-            model = MultipleHeadsModel(model_config, shared_config)
+            model = AlphazeroMultipleHeadsModel(model_config, shared_config)
 
     model = model.to(device)
 

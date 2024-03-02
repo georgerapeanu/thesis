@@ -1,0 +1,8 @@
+location: ./artifacts/stockfish-ubuntu-x86-64-avx2
+threads: 4
+hash: 128
+minimum_thinking_time: 1
+engine_depth: 5
+mate_value: 10000
+defaults:
+  - /data/common_data@_here_

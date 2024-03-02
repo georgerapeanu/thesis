@@ -1,0 +1,13 @@
+count_past_boards: 2
+target_types:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+
+stride_big_sequences: 256
+batch_size: 128
+
+defaults:
+  - /shared@_here_

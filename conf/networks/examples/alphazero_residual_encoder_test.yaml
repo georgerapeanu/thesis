@@ -1,0 +1,11 @@
+board_embedding_size: 64
+board_intermediary_channels: 64
+text_embedding_size: 64
+ff_inner_channels: 64
+num_heads: 4
+transformer_blocks: 2
+optimizer: sgd
+lr: 0.02
+conv_modules_count: 2
+defaults:
+  - /model/alphazero_residual_encoder_base@_here_

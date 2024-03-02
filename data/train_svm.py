@@ -6,11 +6,11 @@ import numpy as np
 from sklearn import svm
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from create_data_type_train_file_cli import TYPES
+from data.create_data_type_train_file_cli import TYPES
 
 
-if __name__ == '__main__':
-    data = pl.read_parquet("../artifacts/commentary_types.parquet")
+def train_svm(artifacts_path: str):
+    data = pl.read_parquet(os.path.join(artifacts_path, "commentary_types.parquet"))
     commentary = [(x['commentary'].strip()).lower() for x in data.rows(named=True)]
     cnt_samples = len(commentary)
     types = np.zeros((cnt_samples, len(TYPES)), dtype=np.int32)
@@ -43,5 +43,5 @@ if __name__ == '__main__':
         print(f"F1: {2 * pr * rc / (pr + rc)}")
         print("")
 
-    with open("../artifacts/svm.p", "wb") as f:
+    with open(os.path.join(artifacts_path, "svm.p"), "wb") as f:
         pickle.dump((vectorizer, classifiers), f)

@@ -9,9 +9,9 @@ from torch.utils.data import Dataset
 from typing import *
 import polars as pl
 from torch.nn.utils.rnn import pad_sequence
-from utils.configs import DataConfig, SharedConfig
 import sentencepiece
 from data.create_data_type_train_file_cli import TYPES
+from omegaconf import ListConfig, DictConfig
 
 FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
 INV_FILES = {'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, 'f': 5, 'g': 6, 'h': 7}
@@ -23,17 +23,22 @@ MOVE_SIZE = 73
 STATE_SIZE = 7
 
 
-class CommentaryDataset(Dataset):
-    def __init__(self, config: DataConfig, shared_config: SharedConfig):
-        self.__config = config
-        self.__deltas, self.__inv_deltas = CommentaryDataset.__all_move_deltas()
-        self.__sp = sentencepiece.SentencePieceProcessor(model_file=shared_config['sentencepiece_path'])
+class AlphazeroCommentaryDataset(Dataset):
+    def __init__(
+        self,
+        config: DictConfig,
+        sp: sentencepiece.SentencePieceProcessor
+    ):
+        self.in_memory = config.in_memory
+        self.count_past_boards = config.count_past_boards
+        self.__deltas, self.__inv_deltas = AlphazeroCommentaryDataset.__all_move_deltas()
+        self.__sp = sp
 
         self.__raw_data = []
         self.__data = []
 
-        for filename in os.listdir(os.path.join(self.__config['data_path'], self.__config['split'])):
-            local_data = pl.read_parquet(os.path.join(self.__config['data_path'], self.__config['split'], filename)).rows(named=True)
+        for filename in os.listdir(os.path.join(config.processed_path, config.split)):
+            local_data = pl.read_parquet(os.path.join(config.processed_path, config.split, filename)).rows(named=True)
             past_boards = []
             for row in local_data:
                 past_boards.append((row['past_board'], row['past_strength']))
@@ -44,7 +49,7 @@ class CommentaryDataset(Dataset):
                 take = False
 
                 types = torch.zeros(len(TYPES), dtype=torch.bool)
-                for i, type in enumerate(shared_config['target_types']):
+                for i, type in enumerate(config.target_types):
                     if row[f"is_type_{type}"]:
                         take = True
                         types[i] = True
@@ -54,24 +59,24 @@ class CommentaryDataset(Dataset):
                     continue
 
                 tokens = [self.__sp.bos_id()] + self.__sp.encode(row['commentary'].strip().replace('\n', '<n>')) + [self.__sp.eos_id()]
-                if len(tokens) > shared_config['context_length']:
-                    for i in range(0, len(tokens) - 1 - shared_config['context_length'], config['stride_big_sequences']):
+                if len(tokens) > config.context_length:
+                    for i in range(0, len(tokens) - 1 - config.context_length, config.stride_big_sequences):
                         self.__raw_data.append((
-                            past_boards[max(0, len(past_boards) - config['past_boards']):],
+                            past_boards[max(0, len(past_boards) - config.count_past_boards):],
                             current_board,
-                            tokens[i:i + shared_config['context_length'] + 1],
+                            tokens[i:i + config.context_length + 1],
                             types
                         ))
-                        if self.__config['in_memory']:
+                        if config.in_memory:
                             self.__data.append(self.raw_data_to_data(self.__raw_data[-1]))
                 else:
                     self.__raw_data.append((
-                        past_boards[max(0, len(past_boards) - config['past_boards']):],
+                        past_boards[max(0, len(past_boards) - config.count_past_boards):],
                         current_board,
                         tokens,
                         types
                     ))
-                    if self.__config['in_memory']:
+                    if config.in_memory:
                         self.__data.append(self.raw_data_to_data(self.__raw_data[-1]))
 
     @staticmethod
@@ -158,7 +163,7 @@ class CommentaryDataset(Dataset):
 
     def raw_data_to_data(self, raw_data):
         answer_board = torch.zeros(
-            [STATE_SIZE + POSITIONAL_SIZE * self.__config['past_boards'] + (POSITIONAL_SIZE + MOVE_SIZE), 8, 8],
+            [STATE_SIZE + POSITIONAL_SIZE * self.count_past_boards + (POSITIONAL_SIZE + MOVE_SIZE), 8, 8],
             dtype=torch.int32)
 
         current_board, current_eval = chess.Board(raw_data[1][0]), raw_data[1][1]
@@ -182,7 +187,7 @@ class CommentaryDataset(Dataset):
         return answer_board.float(), torch.tensor(raw_data[2]), raw_data[3]
 
     def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        if self.__config['in_memory']:
+        if self.in_memory:
             return self.__data[idx]
         else:
             return self.raw_data_to_data(self.__raw_data[idx])
@@ -195,8 +200,8 @@ class CommentaryDataset(Dataset):
         return current_board, past_board, current_eval, past_eval
 
     @staticmethod
-    def get_board_channels(config: DataConfig) -> int:
-        return STATE_SIZE + POSITIONAL_SIZE * config['past_boards'] + (POSITIONAL_SIZE + MOVE_SIZE)
+    def get_board_channels(count_past_boards) -> int:
+        return STATE_SIZE + POSITIONAL_SIZE * count_past_boards + (POSITIONAL_SIZE + MOVE_SIZE)
 
     def get_bos_id(self) -> int:
         return self.__sp.bos_id()
