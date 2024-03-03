@@ -111,7 +111,7 @@ class AlphazeroTransformerModel(L.LightningModule):
 
     def generate(self, X_board: torch.Tensor, X_text: torch.Tensor, max_new_tokens: int, temperature: float = 1.0, do_sample:bool = False) -> torch.Tensor:
         for _ in range(max_new_tokens):
-            X_text_in = X_text if X_text.size(1) < self.context_length else X_text[:, self.context_length:]
+            X_text_in = X_text if X_text.size(1) < self.context_length else X_text[:, -self.context_length:]
             logits, _ = self(X_board, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1).to(X_board.device))
             logits = logits[:, -1, :] / temperature
             probs = torch.nn.functional.softmax(logits, dim=-1)
