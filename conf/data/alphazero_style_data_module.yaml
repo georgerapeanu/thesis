@@ -11,6 +11,10 @@ test_config:
   split: train
   in_memory: false
 
+train_workers: 4
+val_workers: 2
+test_workers: 1
+
 defaults:
   - engine_config: default
   - common_data@_here_

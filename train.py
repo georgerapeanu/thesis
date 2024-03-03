@@ -1,4 +1,5 @@
 import os
+import random
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
@@ -19,6 +20,18 @@ def main(cfg: DictConfig) -> None:
         cfg.model.board_in_channels = dl.get_board_channels()
         cfg.model.eos_id = dl.sp.eos_id()
     model = hydra.utils.instantiate(cfg.model)
+
+    dl.setup("test")
+
+    choices = random.sample(range(len(dl.test_dataset)), cfg.count_to_predict)
+    to_predict = [dl.test_dataset[i] for i in choices]
+    to_predict_metadata = [dl.test_dataset.get_raw_data(i) for i in choices]
+    predictor = Predictor(cfg.data.context_length, dl.sp)
+
+    dl.teardown("test")
+
+    model.set_predictors(predictor, to_predict, to_predict_metadata)
+
     trainer = L.Trainer(
         callbacks=[
             L.pytorch.callbacks.early_stopping.EarlyStopping(monitor="val_loss", mode="min", patience=3, verbose=False),

@@ -29,6 +29,9 @@ class AlphazeroStyleDataModule(L.LightningDataModule):
         test_config: DictConfig,
         vocab_size: int,
         context_length: int,
+        train_workers: int,
+        test_workers: int,
+        val_workers: int,
         force_recrawl: bool = False,
         force_reprocess: bool = False
     ):
@@ -49,6 +52,10 @@ class AlphazeroStyleDataModule(L.LightningDataModule):
         self.train_dataset = None
         self.val_dataset = None
         self.test_dataset = None
+
+        self.train_workers = train_workers
+        self.val_workers = val_workers
+        self.test_workers = test_workers
 
     def prepare_data(self) -> None:
         super().prepare_data()
@@ -124,21 +131,24 @@ class AlphazeroStyleDataModule(L.LightningDataModule):
         return DataLoader(
             self.val_dataset,
             batch_size=self.val_config.batch_size,
-            collate_fn=self.get_collate_fn()
+            collate_fn=self.get_collate_fn(),
+            num_workers=self.val_workers
         )
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
             self.train_dataset,
             batch_size=self.train_config.batch_size,
-            collate_fn=self.get_collate_fn()
+            collate_fn=self.get_collate_fn(),
+            num_workers=self.train_workers
         )
 
     def test_dataloader(self) -> DataLoader:
         return DataLoader(
             self.test_dataset,
             batch_size=self.test_config.batch_size,
-            collate_fn=self.get_collate_fn()
+            collate_fn=self.get_collate_fn(),
+            num_workers=self.test_workers
         )
 
     def get_board_channels(self):

@@ -1,7 +1,13 @@
+from io import BytesIO
+
+import chess
+import chess.svg
 import torch
 import torch.nn as nn
 import torchmetrics
 import wandb
+from PIL import Image
+from cairosvg import svg2png
 from lightning.pytorch.core.module import MODULE_OPTIMIZERS
 from lightning.pytorch.core.optimizer import LightningOptimizer
 from lightning.pytorch.utilities.types import STEP_OUTPUT, LRSchedulerPLType, OptimizerLRScheduler
@@ -78,6 +84,12 @@ class AlphazeroTransformerModel(L.LightningModule):
         self.lr = lr
         self.val_acc = torchmetrics.classification.Accuracy(task="multiclass", num_classes=vocab_size)
 
+        self.predictor = None
+        self.to_predict = []
+        self.to_predict_metadata = []
+        self.wandb_table = wandb.Table(["past_board", "past_eval", "current_board", "current_eval", "actual_text", "predicted_text"])
+
+
     def forward(self, X_board: torch.Tensor, X_text: torch.Tensor, padding_mask: torch.Tensor, targets: Optional[torch.Tensor] = None):
         X_board = self.board_preparation(X_board)
         X_board = X_board.permute(0, 2, 3, 1)
@@ -100,7 +112,7 @@ class AlphazeroTransformerModel(L.LightningModule):
     def generate(self, X_board: torch.Tensor, X_text: torch.Tensor, max_new_tokens: int, temperature: float = 1.0, do_sample:bool = False) -> torch.Tensor:
         for _ in range(max_new_tokens):
             X_text_in = X_text if X_text.size(1) < self.context_length else X_text[:, self.context_length:]
-            logits, _ = self(X_board, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1).to(X_board))
+            logits, _ = self(X_board, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1).to(X_board.device))
             logits = logits[:, -1, :] / temperature
             probs = torch.nn.functional.softmax(logits, dim=-1)
             if do_sample is not None:
@@ -139,6 +151,31 @@ class AlphazeroTransformerModel(L.LightningModule):
             return torch.optim.Adam(self.parameters(), lr=self.lr)
         else:
             raise ValueError(f'Unknown optimizer: {self.optimzer}')
+
+    def set_predictors(self, predictor, to_predict, to_predict_metadata):
+        self.predictor = predictor
+        self.to_predict = to_predict
+        self.to_predict_metadata = to_predict_metadata
+
+    def on_validation_end(self) -> None:
+        for ((X_board, y_tokens, _), (current_board, past_board, current_eval, past_eval)) in zip(self.to_predict,
+                                                                                                  self.to_predict_metadata):
+            predicted_text = self.predictor.predict(self, X_board, '', 1024)
+            actual_text = self.predictor.tokens_to_string(y_tokens)
+            self.wandb_table.add_data(
+                wandb.Image(Image.open(BytesIO(
+                    svg2png(chess.svg.board(None if past_board is None else chess.Board(past_board))))).convert(
+                    'RGBA')),
+                (0 if past_eval is None else past_eval),
+                wandb.Image(
+                    Image.open(BytesIO(svg2png(chess.svg.board(chess.Board(current_board))))).convert('RGBA')),
+                current_eval,
+                actual_text,
+                predicted_text
+            )
+        wandb.log({
+            'predictions': self.wandb_table
+        })
 
 
 class AlphazeroModelResidualEncoder(L.LightningModule):
@@ -194,6 +231,12 @@ class AlphazeroModelResidualEncoder(L.LightningModule):
         self.lr = lr
         self.val_acc = torchmetrics.classification.Accuracy(task="multiclass", num_classes=vocab_size)
 
+        self.predictor = None
+        self.to_predict = []
+        self.to_predict_metadata = []
+        self.wandb_table = wandb.Table(["past_board", "past_eval", "current_board", "current_eval", "actual_text", "predicted_text"])
+
+
     def forward(self, X_board: torch.Tensor, X_text: torch.Tensor, padding_mask: torch.Tensor, targets: Optional[torch.Tensor] = None):
         X_text = self.emb(X_text)
         X_text = self.pe_text(X_text)
@@ -215,10 +258,10 @@ class AlphazeroModelResidualEncoder(L.LightningModule):
 
         return logits, loss
 
-    def generate(self, X_board: torch.Tensor, X_text: torch.Tensor, max_new_tokens: int, device: str, temperature: float = 1.0, do_sample:bool = False) -> torch.Tensor:
+    def generate(self, X_board: torch.Tensor, X_text: torch.Tensor, max_new_tokens: int, temperature: float = 1.0, do_sample:bool = False) -> torch.Tensor:
         for _ in range(max_new_tokens):
             X_text_in = X_text if X_text.size(1) < self.context_length else X_text[:, -self.context_length:]
-            logits, _ = self(X_board, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1).to(device))
+            logits, _ = self(X_board, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1).to(X_board.device))
             logits = logits[:, -1, :] / temperature
             probs = torch.nn.functional.softmax(logits, dim=-1)
             if do_sample is not None:
@@ -256,6 +299,32 @@ class AlphazeroModelResidualEncoder(L.LightningModule):
             return torch.optim.Adam(self.parameters(), lr=self.lr)
         else:
             raise ValueError(f'Unknown optimizer: {self.optimzer}')
+
+
+    def set_predictors(self, predictor, to_predict, to_predict_metadata):
+        self.predictor = predictor
+        self.to_predict = to_predict
+        self.to_predict_metadata = to_predict_metadata
+
+    def on_validation_end(self) -> None:
+        for ((X_board, y_tokens, _), (current_board, past_board, current_eval, past_eval)) in zip(self.to_predict,
+                                                                                                  self.to_predict_metadata):
+            predicted_text = self.predictor.predict(self, X_board, '', 1024)
+            actual_text = self.predictor.tokens_to_string(y_tokens)
+            self.wandb_table.add_data(
+                wandb.Image(Image.open(BytesIO(
+                    svg2png(chess.svg.board(None if past_board is None else chess.Board(past_board))))).convert(
+                    'RGBA')),
+                (0 if past_eval is None else past_eval),
+                wandb.Image(
+                    Image.open(BytesIO(svg2png(chess.svg.board(chess.Board(current_board))))).convert('RGBA')),
+                current_eval,
+                actual_text,
+                predicted_text
+            )
+        wandb.log({
+            'predictions': self.wandb_table
+        })
 
 
 class AlphazeroMultipleHeadsModel(L.LightningModule):
@@ -324,6 +393,12 @@ class AlphazeroMultipleHeadsModel(L.LightningModule):
         self.lr = lr
         self.val_acc = torchmetrics.classification.Accuracy(task="multiclass", num_classes=vocab_size)
 
+        self.predictor = None
+        self.to_predict = []
+        self.to_predict_metadata = []
+        self.wandb_table = wandb.Table(["past_board", "past_eval", "current_board", "current_eval", "actual_text", "predicted_text"])
+
+
     def forward(self,
                 X_board: torch.Tensor,
                 X_text: torch.Tensor,
@@ -362,10 +437,10 @@ class AlphazeroMultipleHeadsModel(L.LightningModule):
 
         return final_logits, loss
 
-    def generate(self, X_board: torch.Tensor, X_text: torch.Tensor, max_new_tokens: int, device: str, temperature: float = 1.0, do_sample:bool = False) -> torch.Tensor:
+    def generate(self, X_board: torch.Tensor, X_text: torch.Tensor, max_new_tokens: int, temperature: float = 1.0, do_sample:bool = False) -> torch.Tensor:
         for _ in range(max_new_tokens):
             X_text_in = X_text if X_text.size(1) < self.context_length else X_text[:, -self.context_length:]
-            logits, _ = self(X_board, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1).to(device))
+            logits, _ = self(X_board, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1).to(X_board.device))
             logits = logits[:, -1, :] / temperature
             probs = torch.nn.functional.softmax(logits, dim=-1)
             if do_sample is not None:
@@ -403,3 +478,29 @@ class AlphazeroMultipleHeadsModel(L.LightningModule):
             return torch.optim.Adam(self.parameters(), lr=self.lr)
         else:
             raise ValueError(f'Unknown optimizer: {self.optimzer}')
+
+
+    def set_predictors(self, predictor, to_predict, to_predict_metadata):
+        self.predictor = predictor
+        self.to_predict = to_predict
+        self.to_predict_metadata = to_predict_metadata
+
+    def on_validation_end(self) -> None:
+        for ((X_board, y_tokens, _), (current_board, past_board, current_eval, past_eval)) in zip(self.to_predict,
+                                                                                                  self.to_predict_metadata):
+            predicted_text = self.predictor.predict(self, X_board, '', 1024)
+            actual_text = self.predictor.tokens_to_string(y_tokens)
+            self.wandb_table.add_data(
+                wandb.Image(Image.open(BytesIO(
+                    svg2png(chess.svg.board(None if past_board is None else chess.Board(past_board))))).convert(
+                    'RGBA')),
+                (0 if past_eval is None else past_eval),
+                wandb.Image(
+                    Image.open(BytesIO(svg2png(chess.svg.board(chess.Board(current_board))))).convert('RGBA')),
+                current_eval,
+                actual_text,
+                predicted_text
+            )
+        wandb.log({
+            'predictions': self.wandb_table
+        })
