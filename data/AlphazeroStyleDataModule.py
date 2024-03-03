@@ -60,7 +60,7 @@ class AlphazeroStyleDataModule(L.LightningDataModule):
                 recrawl = True
         if recrawl:
             print("Crawling dataset")
-            crawler.crawl(self.pickle_path, self.processed_path)
+            crawler.crawl(self.pickle_path, self.raw_data_path)
 
         reprocess = recrawl or self.force_reprocess
         for dir in ["train", "test", "valid"]:

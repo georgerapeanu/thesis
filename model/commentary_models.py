@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+import torchmetrics
+import wandb
 from lightning.pytorch.core.module import MODULE_OPTIMIZERS
 from lightning.pytorch.core.optimizer import LightningOptimizer
 from lightning.pytorch.utilities.types import STEP_OUTPUT, LRSchedulerPLType, OptimizerLRScheduler
@@ -74,7 +76,7 @@ class AlphazeroTransformerModel(L.LightningModule):
         self.eos_id = eos_id
         self.optimizer = optimizer
         self.lr = lr
-
+        self.val_acc = torchmetrics.classification.Accuracy(task="multiclass", num_classes=vocab_size)
 
     def forward(self, X_board: torch.Tensor, X_text: torch.Tensor, padding_mask: torch.Tensor, targets: Optional[torch.Tensor] = None):
         X_board = self.board_preparation(X_board)
@@ -95,10 +97,10 @@ class AlphazeroTransformerModel(L.LightningModule):
 
         return logits, loss
 
-    def generate(self, X_board: torch.Tensor, X_text: torch.Tensor, max_new_tokens: int, device: str, temperature: float = 1.0, do_sample:bool = False) -> torch.Tensor:
+    def generate(self, X_board: torch.Tensor, X_text: torch.Tensor, max_new_tokens: int, temperature: float = 1.0, do_sample:bool = False) -> torch.Tensor:
         for _ in range(max_new_tokens):
             X_text_in = X_text if X_text.size(1) < self.context_length else X_text[:, self.context_length:]
-            logits, _ = self(X_board, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1).to(device))
+            logits, _ = self(X_board, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1).to(X_board))
             logits = logits[:, -1, :] / temperature
             probs = torch.nn.functional.softmax(logits, dim=-1)
             if do_sample is not None:
@@ -121,6 +123,7 @@ class AlphazeroTransformerModel(L.LightningModule):
         logits, loss = self(X_board, X_text, pad_mask, y_sequence)
 
         self.log('val_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log('val_acc', self.val_acc(logits.view(-1, logits.size(-1)), y_sequence.flatten()), on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def test_step(self, batch: torch.Tensor, batch_idx: int) -> STEP_OUTPUT:
@@ -155,7 +158,7 @@ class AlphazeroModelResidualEncoder(L.LightningModule):
             conv_modules_count: int,
             eos_id: int,
             optimizer: str,
-            lr: float
+            lr: float,
         ):
         super(AlphazeroModelResidualEncoder, self).__init__()
         self.save_hyperparameters()
@@ -189,6 +192,7 @@ class AlphazeroModelResidualEncoder(L.LightningModule):
         self.eos_id = eos_id
         self.optimizer = optimizer
         self.lr = lr
+        self.val_acc = torchmetrics.classification.Accuracy(task="multiclass", num_classes=vocab_size)
 
     def forward(self, X_board: torch.Tensor, X_text: torch.Tensor, padding_mask: torch.Tensor, targets: Optional[torch.Tensor] = None):
         X_text = self.emb(X_text)
@@ -234,8 +238,9 @@ class AlphazeroModelResidualEncoder(L.LightningModule):
 
     def validation_step(self, batch: torch.Tensor, batch_idx: int) -> STEP_OUTPUT:
         (X_board, X_text, y_sequence, pad_mask, types) = batch
-        _, loss = self(X_board, X_text, pad_mask, y_sequence)
+        logits, loss = self(X_board, X_text, pad_mask, y_sequence)
         self.log('val_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log('val_acc', self.val_acc(logits.view(-1, logits.size(-1)), y_sequence.flatten()), on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def test_step(self, batch: torch.Tensor, batch_idx: int) -> STEP_OUTPUT:
@@ -251,6 +256,7 @@ class AlphazeroModelResidualEncoder(L.LightningModule):
             return torch.optim.Adam(self.parameters(), lr=self.lr)
         else:
             raise ValueError(f'Unknown optimizer: {self.optimzer}')
+
 
 class AlphazeroMultipleHeadsModel(L.LightningModule):
     def __init__(
@@ -268,7 +274,7 @@ class AlphazeroMultipleHeadsModel(L.LightningModule):
             eos_id: int,
             target_types_and_depth: List[Tuple[int, int]],
             optimizer: str,
-            lr: float
+            lr: float,
     ):
         super(AlphazeroMultipleHeadsModel, self).__init__()
         self.save_hyperparameters()
@@ -316,6 +322,7 @@ class AlphazeroMultipleHeadsModel(L.LightningModule):
         self.target_types_and_depth = target_types_and_depth
         self.optimizer = optimizer
         self.lr = lr
+        self.val_acc = torchmetrics.classification.Accuracy(task="multiclass", num_classes=vocab_size)
 
     def forward(self,
                 X_board: torch.Tensor,
@@ -378,8 +385,9 @@ class AlphazeroMultipleHeadsModel(L.LightningModule):
 
     def validation_step(self, batch: torch.Tensor, batch_idx: int) -> STEP_OUTPUT:
         (X_board, X_text, y_sequence, pad_mask, types) = batch
-        _, loss = self(X_board, X_text, pad_mask, y_sequence, types)
+        logits, loss = self(X_board, X_text, pad_mask, y_sequence, types)
         self.log('val_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log('val_acc', self.val_acc(logits.view(-1, logits.size(-1)), y_sequence.flatten()), on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def test_step(self, batch: torch.Tensor, batch_idx: int) -> STEP_OUTPUT:
