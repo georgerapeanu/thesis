@@ -53,18 +53,17 @@ class AlphazeroCommentaryDataset(Dataset):
                     if row[f"is_type_{type}"]:
                         take = True
                         types[i] = True
-                        break
 
                 if not take:
                     continue
 
                 tokens = [self.__sp.bos_id()] + self.__sp.encode(row['commentary'].strip().replace('\n', '<n>')) + [self.__sp.eos_id()]
                 if len(tokens) > config.context_length:
-                    for i in range(0, len(tokens) - 1 - config.context_length, config.stride_big_sequences):
+                    for i in range(0, len(tokens), config.stride_big_sequences):
                         self.__raw_data.append((
                             past_boards[max(0, len(past_boards) - config.count_past_boards):],
                             current_board,
-                            tokens[i:i + config.context_length + 1],
+                            tokens[i:min(len(tokens), i + config.context_length + 1)],
                             types
                         ))
                         if config.in_memory:
@@ -115,7 +114,7 @@ class AlphazeroCommentaryDataset(Dataset):
         layers[13, :, :] = (torch.full([8, 8], evaluation))
 
         # Repetitions -> 1
-        for count in range(3, -1, -1):
+        for count in range(3, 0, -1):
             if count == 0 or board.is_repetition(count):
                 layers[14, :, :] = (torch.full((8, 8), count))
                 break
@@ -202,15 +201,3 @@ class AlphazeroCommentaryDataset(Dataset):
     @staticmethod
     def get_board_channels(count_past_boards) -> int:
         return STATE_SIZE + POSITIONAL_SIZE * count_past_boards + (POSITIONAL_SIZE + MOVE_SIZE)
-
-    def get_bos_id(self) -> int:
-        return self.__sp.bos_id()
-
-    def get_eos_id(self) -> int:
-        return self.__sp.eos_id()
-
-    def get_pad_id(self) -> int:
-        return self.__sp.pad_id()
-
-    def get_vocab_size(self) -> int:
-        return self.__sp.vocab_size()

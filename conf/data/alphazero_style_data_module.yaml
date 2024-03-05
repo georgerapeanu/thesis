@@ -8,7 +8,7 @@ val_config:
   split: valid
   in_memory: true
 test_config:
-  split: train
+  split: test
   in_memory: false
 
 train_workers: 4
