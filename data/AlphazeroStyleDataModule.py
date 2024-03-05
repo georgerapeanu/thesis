@@ -76,9 +76,9 @@ class AlphazeroStyleDataModule(L.LightningDataModule):
                 reprocess = True
 
         if reprocess:
+            process_raw_data(self.engine_config)
             extract_commentaries_for_svm.extract(self.artifacts_path, self.raw_data_path)
             train_svm(self.artifacts_path)
-            process_raw_data(self.engine_config)
             extract_spm(self.artifacts_path)
 
         if reprocess or not os.path.exists(os.path.join(self.artifacts_path, f"sp{self.vocab_size}.model")):
