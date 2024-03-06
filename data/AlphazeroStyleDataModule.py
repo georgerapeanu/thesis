@@ -15,7 +15,6 @@ from data.spm_train import train_spm
 from data.train_svm import train_svm
 from omegaconf import DictConfig
 
-
 class AlphazeroStyleDataModule(L.LightningDataModule):
     def __init__(
         self,
@@ -85,6 +84,9 @@ class AlphazeroStyleDataModule(L.LightningDataModule):
             print(f"Creating vocab{self.vocab_size}")
             train_spm(artifacts_path=self.artifacts_path, vocab_size=self.vocab_size)
         self.sp = sentencepiece.SentencePieceProcessor(os.path.join(self.artifacts_path, f"sp{self.vocab_size}.model"))
+
+        self.force_reprocess = False
+        self.force_recrawl = False
 
     def setup(self, stage: str) -> None:
         super().setup(stage)
