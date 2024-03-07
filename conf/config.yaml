@@ -2,4 +2,4 @@ count_to_predict: 10
 
 defaults:
   - data: alphazero_style_data_module
-  - ./networks/examples/alphazero_residual_encoder_test@model
+  - ./networks/examples/alphazero_transformer_test@model
