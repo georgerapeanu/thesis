@@ -59,7 +59,7 @@ class AlphazeroCommentaryDataset(Dataset):
 
                 tokens = [self.__sp.bos_id()] + self.__sp.encode(row['commentary'].strip().replace('\n', '<n>')) + [self.__sp.eos_id()]
                 if len(tokens) > config.context_length:
-                    for i in range(0, len(tokens), config.stride_big_sequences):
+                    for i in range(0, len(tokens) - 1, config.stride_big_sequences):
                         self.__raw_data.append((
                             past_boards[max(0, len(past_boards) - config.count_past_boards):],
                             current_board,
