@@ -63,7 +63,7 @@ class AlphazeroCommentaryDataset(Dataset):
                         self.__raw_data.append((
                             past_boards[max(0, len(past_boards) - config.count_past_boards):],
                             current_board,
-                            tokens[i:min(len(tokens), i + config.context_length + 1)],
+                            tokens[i:min(len(tokens), i + config.context_length)],
                             types
                         ))
                         if config.in_memory:
