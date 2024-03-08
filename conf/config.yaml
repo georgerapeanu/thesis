@@ -3,4 +3,4 @@ num_epochs: 100
 
 defaults:
   - data: alphazero_style_data_module
-  - ./networks/examples/alphazero_transformer_test@model
+  - model: alphazero_transformer_test
