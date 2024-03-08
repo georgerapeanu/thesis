@@ -49,10 +49,10 @@ class AlphazeroCommentaryDataset(Dataset):
                 take = False
 
                 types = torch.zeros(len(TYPES), dtype=torch.bool)
-                for i, type in enumerate(config.target_types):
+                for type in config.target_types:
                     if row[f"is_type_{type}"]:
                         take = True
-                        types[i] = True
+                        types[type] = True
 
                 if not take:
                     continue

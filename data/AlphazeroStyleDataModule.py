@@ -15,6 +15,7 @@ from data.spm_train import train_spm
 from data.train_svm import train_svm
 from omegaconf import DictConfig
 
+
 class AlphazeroStyleDataModule(L.LightningDataModule):
     def __init__(
         self,
