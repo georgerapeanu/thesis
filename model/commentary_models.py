@@ -87,7 +87,6 @@ class AlphazeroTransformerModel(L.LightningModule):
         self.predictor = None
         self.to_predict = []
         self.to_predict_metadata = []
-        self.wandb_table = wandb.Table(["past_board", "past_eval", "current_board", "current_eval", "actual_text", "predicted_text"])
 
     def forward(self, X_board: torch.Tensor, X_text: torch.Tensor, padding_mask: torch.Tensor, targets: Optional[torch.Tensor] = None):
         X_board = self.board_preparation(X_board)
@@ -157,10 +156,11 @@ class AlphazeroTransformerModel(L.LightningModule):
         self.to_predict_metadata = to_predict_metadata
 
     def on_validation_end(self) -> None:
+        wandb_table = wandb.Table(["past_board", "past_eval", "current_board", "current_eval", "actual_text", "predicted_text"])
         for ((X_board, y_tokens, _), (current_board, past_board, current_eval, past_eval)) in tqdm(zip(self.to_predict, self.to_predict_metadata), desc="Prediction"):
             predicted_text = self.predictor.predict(self, X_board, '', 1024)
             actual_text = self.predictor.tokens_to_string(y_tokens)
-            self.wandb_table.add_data(
+            wandb_table.add_data(
                 wandb.Image(Image.open(BytesIO(
                     svg2png(chess.svg.board(None if past_board is None else chess.Board(past_board))))).convert(
                     'RGBA')),
@@ -172,7 +172,7 @@ class AlphazeroTransformerModel(L.LightningModule):
                 predicted_text
             )
         wandb.log({
-            'predictions': self.wandb_table
+            'predictions': wandb_table
         })
 
 
@@ -232,7 +232,6 @@ class AlphazeroModelResidualEncoder(L.LightningModule):
         self.predictor = None
         self.to_predict = []
         self.to_predict_metadata = []
-        self.wandb_table = wandb.Table(["past_board", "past_eval", "current_board", "current_eval", "actual_text", "predicted_text"])
 
 
     def forward(self, X_board: torch.Tensor, X_text: torch.Tensor, padding_mask: torch.Tensor, targets: Optional[torch.Tensor] = None):
@@ -305,10 +304,11 @@ class AlphazeroModelResidualEncoder(L.LightningModule):
         self.to_predict_metadata = to_predict_metadata
 
     def on_validation_end(self) -> None:
+        wandb_table = wandb.Table(["past_board", "past_eval", "current_board", "current_eval", "actual_text", "predicted_text"])
         for ((X_board, y_tokens, _), (current_board, past_board, current_eval, past_eval)) in tqdm(zip(self.to_predict, self.to_predict_metadata), desc="Prediction"):
             predicted_text = self.predictor.predict(self, X_board, '', 1024)
             actual_text = self.predictor.tokens_to_string(y_tokens)
-            self.wandb_table.add_data(
+            wandb_table.add_data(
                 wandb.Image(Image.open(BytesIO(
                     svg2png(chess.svg.board(None if past_board is None else chess.Board(past_board))))).convert(
                     'RGBA')),
@@ -320,7 +320,7 @@ class AlphazeroModelResidualEncoder(L.LightningModule):
                 predicted_text
             )
         wandb.log({
-            'predictions': self.wandb_table
+            'predictions': wandb_table
         })
 
 
@@ -393,7 +393,6 @@ class AlphazeroMultipleHeadsModel(L.LightningModule):
         self.predictor = None
         self.to_predict = []
         self.to_predict_metadata = []
-        self.wandb_table = wandb.Table(["past_board", "past_eval", "current_board", "current_eval", "actual_text", "predicted_text"])
 
 
     def forward(self,
@@ -483,10 +482,11 @@ class AlphazeroMultipleHeadsModel(L.LightningModule):
         self.to_predict_metadata = to_predict_metadata
 
     def on_validation_end(self) -> None:
+        wandb_table = wandb.Table(["past_board", "past_eval", "current_board", "current_eval", "actual_text", "predicted_text"])
         for ((X_board, y_tokens, _), (current_board, past_board, current_eval, past_eval)) in tqdm(zip(self.to_predict, self.to_predict_metadata), desc="Prediction"):
             predicted_text = self.predictor.predict(self, X_board, '', 1024)
             actual_text = self.predictor.tokens_to_string(y_tokens)
-            self.wandb_table.add_data(
+            wandb_table.add_data(
                 wandb.Image(Image.open(BytesIO(
                     svg2png(chess.svg.board(None if past_board is None else chess.Board(past_board))))).convert(
                     'RGBA')),
@@ -498,5 +498,5 @@ class AlphazeroMultipleHeadsModel(L.LightningModule):
                 predicted_text
             )
         wandb.log({
-            'predictions': self.wandb_table
+            'predictions': wandb_table
         })
