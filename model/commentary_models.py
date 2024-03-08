@@ -13,6 +13,7 @@ from lightning.pytorch.core.optimizer import LightningOptimizer
 from lightning.pytorch.utilities.types import STEP_OUTPUT, LRSchedulerPLType, OptimizerLRScheduler
 from omegaconf import DictConfig
 from torch.optim import Optimizer
+from tqdm import tqdm
 
 from model.modules.DepthwiseResidualBlock import DepthwiseResidualBlock
 from model.modules.PositionalEncoding1D import PositionalEncoding1D
@@ -156,8 +157,7 @@ class AlphazeroTransformerModel(L.LightningModule):
         self.to_predict_metadata = to_predict_metadata
 
     def on_validation_end(self) -> None:
-        for ((X_board, y_tokens, _), (current_board, past_board, current_eval, past_eval)) in zip(self.to_predict,
-                                                                                                  self.to_predict_metadata):
+        for ((X_board, y_tokens, _), (current_board, past_board, current_eval, past_eval)) in tqdm(zip(self.to_predict, self.to_predict_metadata), desc="Prediction"):
             predicted_text = self.predictor.predict(self, X_board, '', 1024)
             actual_text = self.predictor.tokens_to_string(y_tokens)
             self.wandb_table.add_data(
@@ -305,8 +305,7 @@ class AlphazeroModelResidualEncoder(L.LightningModule):
         self.to_predict_metadata = to_predict_metadata
 
     def on_validation_end(self) -> None:
-        for ((X_board, y_tokens, _), (current_board, past_board, current_eval, past_eval)) in zip(self.to_predict,
-                                                                                                  self.to_predict_metadata):
+        for ((X_board, y_tokens, _), (current_board, past_board, current_eval, past_eval)) in tqdm(zip(self.to_predict, self.to_predict_metadata), desc="Prediction"):
             predicted_text = self.predictor.predict(self, X_board, '', 1024)
             actual_text = self.predictor.tokens_to_string(y_tokens)
             self.wandb_table.add_data(
@@ -484,8 +483,7 @@ class AlphazeroMultipleHeadsModel(L.LightningModule):
         self.to_predict_metadata = to_predict_metadata
 
     def on_validation_end(self) -> None:
-        for ((X_board, y_tokens, _), (current_board, past_board, current_eval, past_eval)) in zip(self.to_predict,
-                                                                                                  self.to_predict_metadata):
+        for ((X_board, y_tokens, _), (current_board, past_board, current_eval, past_eval)) in tqdm(zip(self.to_predict, self.to_predict_metadata), desc="Prediction"):
             predicted_text = self.predictor.predict(self, X_board, '', 1024)
             actual_text = self.predictor.tokens_to_string(y_tokens)
             self.wandb_table.add_data(
