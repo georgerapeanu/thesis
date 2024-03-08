@@ -39,7 +39,7 @@ def main(cfg: DictConfig) -> None:
         ],
         default_root_dir=cfg.data.artifacts_path,
         logger=L.pytorch.loggers.WandbLogger(project="thesis", log_model="all"),
-        profiler="simple",
+#        profiler="simple",
         max_epochs=cfg.num_epochs
     )
     trainer.fit(
