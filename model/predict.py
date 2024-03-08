@@ -20,7 +20,7 @@ class Predictor:
     def predict(self, model, X_board: torch.tensor, text: str, max_new_tokens: int) -> str:
         tokens = self.__sp.encode(text.strip().replace('\n', '<n>'))
         tokens = [self.__sp.bos_id()] + tokens
-        X_board = X_board.to(model.device)
-        tokens = torch.Tensor(tokens).unsqueeze(0).int().to(model.device)
+        X_board = X_board
+        tokens = torch.Tensor(tokens).unsqueeze(0).int()
         tokens = model.generate(X_board.unsqueeze(0), tokens, max_new_tokens)
         return self.tokens_to_string(tokens)

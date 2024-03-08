@@ -504,3 +504,65 @@ class AlphazeroMultipleHeadsModel(L.LightningModule):
         wandb.log({
             'predictions': self.wandb_table
         })
+
+
+class Model(nn.Module):
+    def __init__(self, config: ModelConfig, shared_config: SharedConfig):
+        super(Model, self).__init__()
+        self.board_preparation = nn.Sequential(
+            nn.Conv2d(in_channels=config['board_in_channels'], out_channels=config['board_embedding_size'], kernel_size=1, padding=0, bias=True),
+            *[DepthwiseResidualBlock(in_channels=config['board_embedding_size'], intermediary_channels=config['board_intermediary_channels']) for _ in range(config['conv_modules_count'])]
+        )
+
+        self.emb = torch.nn.Embedding(num_embeddings=shared_config['vocab_size'], embedding_dim=config['text_embedding_size'])
+
+        self.pe_board = PositionalEncoding2D(config['board_height'], config['board_width'], config['board_embedding_size'])
+        self.pe_text = PositionalEncoding1D(shared_config['context_length'], config['text_embedding_size'])
+
+        self.encoders = nn.ModuleList([EncoderBlock(ff_inner_channels=config['ff_inner_channels'], num_heads=config['num_heads'], embed_dims=config['board_embedding_size']) for _ in range(config['transformer_blocks'])])
+        self.decoders = nn.ModuleList([
+            DecoderBlock(
+                ff_inner_channels=config['ff_inner_channels'],
+                num_heads=config['num_heads'],
+                decoder_embed_dims=config['text_embedding_size'],
+                encoder_embed_dims=config['board_embedding_size'],
+                max_length=shared_config['context_length'])
+            for _ in range(config['transformer_blocks'])
+        ])
+        self.linear = nn.Linear(in_features=config['text_embedding_size'], out_features=shared_config['vocab_size'])
+        self.__config = config
+        self.__shared_config = shared_config
+
+    def forward(self, X_board: torch.Tensor, X_text: torch.Tensor, padding_mask: torch.Tensor, targets: Optional[torch.Tensor] = None):
+        X_board = self.board_preparation(X_board)
+        X_board = X_board.permute(0, 2, 3, 1)
+        b, _, _, ch = X_board.shape
+        X_board = self.pe_board(X_board).view(b, -1, ch)
+        X_text = self.emb(X_text)
+        X_text = self.pe_text(X_text)
+        for encoder, decoder in zip(self.encoders, self.decoders):
+            X_board = encoder(X_board)
+            X_text = decoder(X_board, X_text, padding_mask)
+        logits = self.linear(X_text)
+        loss = None
+        if targets is not None:
+            log_logits = -torch.nn.functional.log_softmax(logits, dim=-1)
+            log_logits = log_logits.masked_fill(padding_mask.unsqueeze(-1), 0)
+            loss = torch.gather(log_logits, -1, targets.unsqueeze(-1)).sum() / padding_mask.int().sum()
+
+        return logits, loss
+
+    def generate(self, X_board: torch.Tensor, X_text: torch.Tensor, max_new_tokens: int, temperature: float = 1.0, do_sample:bool = False) -> torch.Tensor:
+        for _ in range(max_new_tokens):
+            X_text_in = X_text if X_text.size(1) < self.__shared_config['context_length'] else X_text[:, -self.__shared_config['context_length']:]
+            logits, _ = self(X_board, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1))
+            logits = logits[:, -1, :] / temperature
+            probs = torch.nn.functional.softmax(logits, dim=-1)
+            if do_sample is not None:
+                text_next = torch.multinomial(probs, num_samples=1)
+            else:
+                _, text_next = torch.topk(probs, k=1, dim=-1)
+            X_text = torch.cat([X_text, text_next], dim=1)
+            if text_next == self.__shared_config['eos_id']:
+                break
+        return X_text
