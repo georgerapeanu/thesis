@@ -30,7 +30,6 @@ import lightning as L
 # http://juditacs.github.io/2018/12/27/masked-attention.html
 
 
-
 class AlphazeroTransformerModel(L.LightningModule):
     def __init__(
             self,
@@ -89,7 +88,6 @@ class AlphazeroTransformerModel(L.LightningModule):
         self.to_predict_metadata = []
         self.wandb_table = wandb.Table(["past_board", "past_eval", "current_board", "current_eval", "actual_text", "predicted_text"])
 
-
     def forward(self, X_board: torch.Tensor, X_text: torch.Tensor, padding_mask: torch.Tensor, targets: Optional[torch.Tensor] = None):
         X_board = self.board_preparation(X_board)
         X_board = X_board.permute(0, 2, 3, 1)
@@ -135,7 +133,7 @@ class AlphazeroTransformerModel(L.LightningModule):
         logits, loss = self(X_board, X_text, pad_mask, y_sequence)
 
         self.log('val_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log('val_acc', self.val_acc(logits.view(-1, logits.size(-1)), y_sequence.flatten()), on_epoch=True, prog_bar=True, logger=True)
+        self.log('val_acc', self.val_acc(logits.view(-1, logits.size(-1))[pad_mask.flatten() == False], y_sequence.flatten()[pad_mask.flatten() == False]), on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def test_step(self, batch: torch.Tensor, batch_idx: int) -> STEP_OUTPUT:
@@ -148,7 +146,7 @@ class AlphazeroTransformerModel(L.LightningModule):
         if self.optimizer == 'adam':
             return torch.optim.Adam(self.parameters(), lr=self.lr)
         elif self.optimizer == 'sgd':
-            return torch.optim.Adam(self.parameters(), lr=self.lr)
+            return torch.optim.SGD(self.parameters(), lr=self.lr)
         else:
             raise ValueError(f'Unknown optimizer: {self.optimzer}')
 
@@ -283,7 +281,7 @@ class AlphazeroModelResidualEncoder(L.LightningModule):
         (X_board, X_text, y_sequence, pad_mask, types) = batch
         logits, loss = self(X_board, X_text, pad_mask, y_sequence)
         self.log('val_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log('val_acc', self.val_acc(logits.view(-1, logits.size(-1)), y_sequence.flatten()), on_epoch=True, prog_bar=True, logger=True)
+        self.log('val_acc', self.val_acc(logits.view(-1, logits.size(-1))[pad_mask.flatten() == False], y_sequence.flatten()[pad_mask.flatten() == False]), on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def test_step(self, batch: torch.Tensor, batch_idx: int) -> STEP_OUTPUT:
@@ -296,7 +294,7 @@ class AlphazeroModelResidualEncoder(L.LightningModule):
         if self.optimizer == 'adam':
             return torch.optim.Adam(self.parameters(), lr=self.lr)
         elif self.optimizer == 'sgd':
-            return torch.optim.Adam(self.parameters(), lr=self.lr)
+            return torch.optim.SGD(self.parameters(), lr=self.lr)
         else:
             raise ValueError(f'Unknown optimizer: {self.optimzer}')
 
@@ -462,7 +460,7 @@ class AlphazeroMultipleHeadsModel(L.LightningModule):
         (X_board, X_text, y_sequence, pad_mask, types) = batch
         logits, loss = self(X_board, X_text, pad_mask, y_sequence, types)
         self.log('val_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log('val_acc', self.val_acc(logits.view(-1, logits.size(-1)), y_sequence.flatten()), on_epoch=True, prog_bar=True, logger=True)
+        self.log('val_acc', self.val_acc(logits.view(-1, logits.size(-1))[pad_mask.flatten() == False], y_sequence.flatten()[pad_mask.flatten() == False]), on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def test_step(self, batch: torch.Tensor, batch_idx: int) -> STEP_OUTPUT:
@@ -475,7 +473,7 @@ class AlphazeroMultipleHeadsModel(L.LightningModule):
         if self.optimizer == 'adam':
             return torch.optim.Adam(self.parameters(), lr=self.lr)
         elif self.optimizer == 'sgd':
-            return torch.optim.Adam(self.parameters(), lr=self.lr)
+            return torch.optim.SGD(self.parameters(), lr=self.lr)
         else:
             raise ValueError(f'Unknown optimizer: {self.optimzer}')
 

@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+
 class TransformerEncoderBlock(nn.Module):
     def __init__(self, ff_inner_channels: int, embed_dims: int, num_heads: int):
         super(TransformerEncoderBlock, self).__init__()

@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch
 import math
 
+
 class DepthwiseResidualBlock(nn.Module):
     def __init__(self, in_channels: int, intermediary_channels: int):
         super(DepthwiseResidualBlock, self).__init__()
