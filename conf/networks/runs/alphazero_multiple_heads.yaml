@@ -1,0 +1,26 @@
+board_embedding_size: 256
+text_embedding_size: 256
+ff_inner_channels: 512
+num_heads: 8
+transformer_blocks: 6
+optimizer: sgd
+lr: 0.08
+target_types_and_depth:
+  -
+    - 0
+    - 1
+  -
+    - 1
+    - 2
+  -
+    - 2
+    - 3
+  -
+    - 4
+    - 4
+  -
+    - 3
+    - 5
+
+defaults:
+  - /model/alphazero_multiple_heads_base@_here_
