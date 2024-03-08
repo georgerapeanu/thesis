@@ -1,4 +1,5 @@
 count_to_predict: 10
+num_epochs: 10
 
 defaults:
   - data: alphazero_style_data_module
