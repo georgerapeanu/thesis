@@ -1,0 +1,9 @@
+board_embedding_size: 64
+text_embedding_size: 64
+ff_inner_channels: 64
+num_heads: 4
+transformer_blocks: 2
+optimizer: sgd
+lr: 0.02
+defaults:
+  - /model/actual_board_transformer_base@_here_

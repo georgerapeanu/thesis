@@ -8,16 +8,19 @@ from data.AlphazeroStyleDataModule import AlphazeroStyleDataModule
 import omegaconf
 import lightning as L
 
-from model.predict import Predictor
+from model.predict import AlphaZeroPredictor
 
 
 @hydra.main(config_path="./conf", config_name="config", version_base="1.2")
 def main(cfg: DictConfig) -> None:
     print(OmegaConf.to_yaml(cfg))
-    dl: AlphazeroStyleDataModule = hydra.utils.instantiate(cfg.data)
+    dl = hydra.utils.instantiate(cfg.data)
     dl.prepare_data()
     with omegaconf.open_dict(cfg):
-        cfg.model.board_in_channels = dl.get_board_channels()
+        if isinstance(dl, AlphazeroStyleDataModule):
+            cfg.model.board_in_channels = dl.get_board_channels()
+        else:
+            cfg.model.count_past_boards = cfg.data.train_config.count_past_boards
         cfg.model.eos_id = dl.sp.eos_id()
     model = hydra.utils.instantiate(cfg.model)
 
@@ -26,11 +29,10 @@ def main(cfg: DictConfig) -> None:
     choices = random.sample(range(len(dl.test_dataset)), cfg.count_to_predict)
     to_predict = [dl.test_dataset[i] for i in choices]
     to_predict_metadata = [dl.test_dataset.get_raw_data(i) for i in choices]
-    predictor = Predictor(cfg.data.context_length, dl.sp)
 
     dl.teardown("test")
 
-    model.set_predictors(predictor, to_predict, to_predict_metadata)
+    model.set_predictors(dl.sp, to_predict, to_predict_metadata)
 
     trainer = L.Trainer(
         callbacks=[
