@@ -8,19 +8,19 @@ lr: 0.02
 target_types_and_depth:
   -
     - 0
-    - 2
+    - 0
   -
     - 1
     - 1
   -
     - 2
-    - 3
+    - 1
   -
     - 4
-    - 4
+    - 1
   -
     - 3
-    - 5
+    - 1
 
 defaults:
   - /model/actual_board_transformer_multiple_heads_base@_here_
