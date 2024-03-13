@@ -671,3 +671,196 @@ class ActualBoardTransformerModel(L.LightningModule):
         wandb.log({
             'predictions': wandb_table
         })
+
+
+
+
+class ActualBoardTransformerMultipleHeadsModel(L.LightningModule):
+    def __init__(
+            self,
+            count_past_boards: int,
+            board_embedding_size: int,
+            vocab_size: int,
+            text_embedding_size: int,
+            board_height: int,
+            board_width: int,
+            context_length: int,
+            ff_inner_channels: int,
+            num_heads: int,
+            transformer_blocks: int,
+            eos_id: int,
+            target_types_and_depth: List[Tuple[int, int]],
+            optimizer: str,
+            lr: float
+    ):
+        super(ActualBoardTransformerMultipleHeadsModel, self).__init__()
+        self.save_hyperparameters()
+
+        self.piece_embedding = nn.Embedding(num_embeddings=ActualBoardDataModule.get_board_token_size(), embedding_dim=board_embedding_size)
+        self.pe_cell_embedding = nn.Parameter(data=torch.randn(board_width * board_height, board_embedding_size))
+        self.pe_board_embedding = nn.Parameter(data=torch.randn(count_past_boards + 1, 1, board_embedding_size))
+        self.strength_linear = nn.Linear(in_features=1, out_features=board_embedding_size)
+        self.reps_linear = nn.Linear(in_features=1, out_features=board_embedding_size)
+        self.state_ff = nn.Sequential(
+            nn.Linear(in_features=7, out_features=board_embedding_size),
+            nn.ReLU(inplace=True),
+            nn.Linear(in_features=board_embedding_size, out_features=board_embedding_size)
+        ) #bias learns the positional embedding
+
+        self.emb = torch.nn.Embedding(num_embeddings=vocab_size, embedding_dim=text_embedding_size)
+        self.pe_text = PositionalEncoding1D(context_length, text_embedding_size)
+
+        self.encoders = nn.ModuleList([
+            TransformerEncoderBlock(
+                ff_inner_channels=ff_inner_channels,
+                num_heads=num_heads,
+                embed_dims=board_embedding_size)
+            for _ in range(transformer_blocks)
+        ])
+
+        self.decoders = nn.ModuleList([
+            TransformerDecoderBlock(
+                ff_inner_channels=ff_inner_channels,
+                num_heads=num_heads,
+                decoder_embed_dims=text_embedding_size,
+                encoder_embed_dims=board_embedding_size,
+                max_length=context_length
+            )
+            for _ in range(transformer_blocks)
+        ])
+
+        self.target_types_and_depth = target_types_and_depth
+
+        self.linears = nn.ModuleList([
+            nn.Linear(in_features=text_embedding_size, out_features=vocab_size)
+            for _ in range(len(target_types_and_depth))
+        ])
+
+        self.final_linear = nn.Linear(in_features=text_embedding_size, out_features=vocab_size)
+
+        self.context_length = context_length
+        self.eos_id = eos_id
+        self.optimizer = optimizer
+        self.lr = lr
+        self.val_acc = torchmetrics.classification.Accuracy(task="multiclass", num_classes=vocab_size)
+
+        self.predictor = None
+        self.to_predict = []
+        self.to_predict_metadata = []
+
+    def forward(
+            self,
+            X_boards: torch.Tensor,                     # Batch x Boards x 64
+            X_strength: torch.Tensor,                   # Batch x Boards x 1
+            X_reps: torch.Tensor,                       # Batch x Boards x 1
+            X_state: torch.Tensor,                      # Batch x Boards x 7
+            X_text: torch.Tensor,                       # Batch x T
+            padding_mask: torch.Tensor,                 # Batch x T
+            targets: Optional[torch.Tensor] = None,     # Batch x Types
+            is_type: Optional[torch.Tensor] = None
+    ):    # Batch x T
+
+        X_boards = self.piece_embedding(X_boards)
+        X_boards = X_boards + self.pe_cell_embedding
+        X_boards = X_boards + self.pe_board_embedding
+
+        X_strength = self.strength_linear(X_strength).unsqueeze(2)
+        X_reps = self.reps_linear(X_reps).unsqueeze(2)
+        X_state = self.state_ff(X_state).unsqueeze(1)
+
+        X_boards = torch.cat([X_boards, X_strength, X_reps], dim=2)
+        X_boards = X_boards.view(X_boards.size(0), -1, X_boards.size(-1))
+        X_boards = torch.cat([X_boards, X_state], dim=1)
+
+        X_text = self.emb(X_text)
+        X_text = self.pe_text(X_text)
+        decoder_outputs = []
+        for i, (encoder, decoder) in enumerate(zip(self.encoders, self.decoders)):
+            X_board = encoder(X_board)
+            X_text = decoder(X_board, X_text, padding_mask)  # test adding pe at each step
+            decoder_outputs.append(X_text)
+
+        final_logits = self.final_linear(X_text)
+        loss = None
+        count = (padding_mask == False).int().sum().item()
+        if targets is not None:
+            loss = torch.Tensor([0]).to(final_logits.device)
+            for (type, depth) in self.target_types_and_depth:
+                idx = is_type[:, type]
+                my_logits = self.linears[type](decoder_outputs[depth][idx])
+                my_log_logits = -torch.nn.functional.log_softmax(my_logits, dim=-1)
+                my_log_logits = my_log_logits.masked_fill(padding_mask[idx].unsqueeze(-1), 0)
+                loss += torch.gather(my_log_logits, -1, targets[idx].unsqueeze(-1)).sum() / count
+            log_logits = -torch.nn.functional.log_softmax(final_logits, dim=-1)
+            log_logits = log_logits.masked_fill(padding_mask.unsqueeze(-1), 0)
+            loss += torch.gather(log_logits, -1, targets.unsqueeze(-1)).sum() / count
+
+        return final_logits, loss
+
+    def generate(self, X_board: torch.Tensor, X_strength, X_reps, X_state, X_text: torch.Tensor, max_new_tokens: int, temperature: float = 1.0, do_sample:bool = False) -> torch.Tensor:
+        for _ in range(max_new_tokens):
+            X_text_in = X_text if X_text.size(1) < self.context_length else X_text[:, -self.context_length:]
+            logits, _ = self(X_board, X_strength, X_reps, X_state, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1).to(X_board.device))
+            logits = logits[:, -1, :] / temperature
+            probs = torch.nn.functional.softmax(logits, dim=-1)
+            if do_sample is not None:
+                text_next = torch.multinomial(probs, num_samples=1)
+            else:
+                _, text_next = torch.topk(probs, k=1, dim=-1)
+            X_text = torch.cat([X_text, text_next], dim=1)
+            if text_next == self.eos_id:
+                break
+        return X_text
+
+    def training_step(self, batch: torch.Tensor, batch_idx: int) -> STEP_OUTPUT:
+        (X_board, X_strength, X_reps, X_state, X_text, y_sequence, pad_mask, types) = batch
+        _, loss = self(X_board, X_strength, X_reps, X_state, X_text, pad_mask, y_sequence, types)
+        self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        return loss
+
+    def validation_step(self, batch: torch.Tensor, batch_idx: int) -> STEP_OUTPUT:
+        (X_board, X_strength, X_reps, X_state, X_text, y_sequence, pad_mask, types) = batch
+        logits, loss = self(X_board, X_strength, X_reps, X_state, X_text, pad_mask, y_sequence, types)
+
+        self.log('val_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log('val_acc', self.val_acc(logits.view(-1, logits.size(-1))[pad_mask.flatten() == False], y_sequence.flatten()[pad_mask.flatten() == False]), on_epoch=True, prog_bar=True, logger=True)
+        return loss
+
+    def test_step(self, batch: torch.Tensor, batch_idx: int) -> STEP_OUTPUT:
+        (X_board, X_strength, X_reps, X_state, X_text, y_sequence, pad_mask, types) = batch
+        _, loss = self(X_board, X_strength, X_reps, X_state, X_text, pad_mask, y_sequence, types)
+        self.log('test_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        return loss
+
+    def configure_optimizers(self):
+        if self.optimizer == 'adam':
+            return torch.optim.Adam(self.parameters(), lr=self.lr)
+        elif self.optimizer == 'sgd':
+            return torch.optim.SGD(self.parameters(), lr=self.lr)
+        else:
+            raise ValueError(f'Unknown optimizer: {self.optimzer}')
+
+    def set_predictors(self, sp, to_predict, to_predict_metadata):
+        self.predictor = ActualBoardPredictor(self.context_length, sp)
+        self.to_predict = to_predict
+        self.to_predict_metadata = to_predict_metadata
+
+    def on_validation_end(self) -> None:
+        wandb_table = wandb.Table(["past_board", "past_eval", "current_board", "current_eval", "actual_text", "predicted_text"])
+        for ((X_board, X_strength, X_reps, X_state, y_tokens, _), (current_board, past_board, current_eval, past_eval)) in tqdm(zip(self.to_predict, self.to_predict_metadata), desc="Prediction"):
+            predicted_text = self.predictor.predict(self, X_board, X_strength, X_reps, X_state, '', 1024)
+            actual_text = self.predictor.tokens_to_string(y_tokens)
+            wandb_table.add_data(
+                wandb.Image(Image.open(BytesIO(
+                    svg2png(chess.svg.board(None if past_board is None else chess.Board(past_board))))).convert(
+                    'RGBA')),
+                (0 if past_eval is None else past_eval),
+                wandb.Image(
+                    Image.open(BytesIO(svg2png(chess.svg.board(chess.Board(current_board))))).convert('RGBA')),
+                current_eval,
+                actual_text,
+                predicted_text
+            )
+        wandb.log({
+            'predictions': wandb_table
+        })
