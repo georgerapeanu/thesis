@@ -423,9 +423,9 @@ class AlphazeroMultipleHeadsModel(L.LightningModule):
         count = (padding_mask == False).int().sum().item()
         if targets is not None:
             loss = torch.Tensor([0]).to(final_logits.device)
-            for (type, depth) in self.target_types_and_depth:
+            for i, (type, depth) in enumerate(self.target_types_and_depth):
                 idx = is_type[:, type]
-                my_logits = self.linears[type](decoder_outputs[depth][idx])
+                my_logits = self.linears[i](decoder_outputs[depth][idx])
                 my_log_logits = -torch.nn.functional.log_softmax(my_logits, dim=-1)
                 my_log_logits = my_log_logits.masked_fill(padding_mask[idx].unsqueeze(-1), 0)
                 loss += torch.gather(my_log_logits, -1, targets[idx].unsqueeze(-1)).sum() / count
