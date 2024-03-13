@@ -776,8 +776,8 @@ class ActualBoardTransformerMultipleHeadsModel(L.LightningModule):
         X_text = self.pe_text(X_text)
         decoder_outputs = []
         for i, (encoder, decoder) in enumerate(zip(self.encoders, self.decoders)):
-            X_board = encoder(X_board)
-            X_text = decoder(X_board, X_text, padding_mask)  # test adding pe at each step
+            X_boards = encoder(X_boards)
+            X_text = decoder(X_boards, X_text, padding_mask)  # test adding pe at each step
             decoder_outputs.append(X_text)
 
         final_logits = self.final_linear(X_text)
