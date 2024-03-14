@@ -853,7 +853,11 @@ class ActualBoardTransformerMultipleHeadsModel(L.LightningModule):
             optim = torch.optim.SGD(self.parameters(), lr=self.lr)
         else:
             raise ValueError(f'Unknown optimizer: {self.optimzer}')
-        return [optim], [ReduceLROnPlateau(optim, 'min', patience=3, factor=0.3)]
+        return {
+            "optmizer": optim,
+            "lr_scheduler": ReduceLROnPlateau(optim, 'min', patience=3, factor=0.3),
+            "monitor": "val_loss"
+        }
 
     def set_predictors(self, sp, to_predict, to_predict_metadata):
         self.predictor = ActualBoardPredictor(self.context_length, sp)
