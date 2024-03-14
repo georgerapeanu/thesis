@@ -854,7 +854,7 @@ class ActualBoardTransformerMultipleHeadsModel(L.LightningModule):
         else:
             raise ValueError(f'Unknown optimizer: {self.optimzer}')
         return {
-            "optmizer": optim,
+            "optimizer": optim,
             "lr_scheduler": ReduceLROnPlateau(optim, 'min', patience=3, factor=0.3),
             "monitor": "val_loss"
         }
