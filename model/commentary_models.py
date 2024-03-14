@@ -788,7 +788,7 @@ class ActualBoardTransformerMultipleHeadsModel(L.LightningModule):
             decoder_outputs.append(X_text)
 
         final_logits = self.final_linear(X_text)
-        loss = torch.tensor([0]).to(final_logits.device)
+        loss = torch.tensor([0.0]).to(final_logits.device)
         count = (~padding_mask).int().sum().item()
         if targets is not None and is_type is not None:
             for i, linear in enumerate(self.linears):
