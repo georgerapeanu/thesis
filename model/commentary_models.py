@@ -28,6 +28,8 @@ from typing import *
 import math
 import lightning as L
 
+from omegaconf import OmegaConf
+
 # Very good https://sungwookyoo.github.io/tips/study/Multihead_Attention/
 # https://github.dev/karpathy/minGPT
 # http://juditacs.github.io/2018/12/27/masked-attention.html
@@ -101,13 +103,13 @@ class AlphazeroTransformerModel(L.LightningModule):
             X_board = encoder(X_board)
             X_text = decoder(X_board, X_text, padding_mask)
         logits = self.linear(X_text)
-        loss = None
+        loss = torch.tensor(0)
         if targets is not None:
             log_logits = -torch.nn.functional.log_softmax(logits, dim=-1)
             log_logits = log_logits.masked_fill(padding_mask.unsqueeze(-1), 0)
-            loss = torch.gather(log_logits, -1, targets.unsqueeze(-1)).sum() / (padding_mask == False).int().sum()
+            loss = torch.gather(log_logits, -1, targets.unsqueeze(-1)).sum() / (~padding_mask).int().sum()
 
-        return logits, loss
+        return logits, loss if targets is not None else None
 
     def generate(self, X_board: torch.Tensor, X_text: torch.Tensor, max_new_tokens: int, temperature: float = 1.0, do_sample:bool = False) -> torch.Tensor:
         for _ in range(max_new_tokens):
@@ -249,13 +251,13 @@ class AlphazeroModelResidualEncoder(L.LightningModule):
             X_text = decoder(X_board.permute(0, 2, 3, 1).view(b, -1, ch), X_text, padding_mask) #test adding pe at each step
 
         logits = self.linear(X_text)
-        loss = None
+        loss = torch.tensor(0)
         if targets is not None:
             log_logits = -torch.nn.functional.log_softmax(logits, dim=-1)
             log_logits = log_logits.masked_fill(padding_mask.unsqueeze(-1), 0)
-            loss = torch.gather(log_logits, -1, targets.unsqueeze(-1)).sum() / (padding_mask == False).int().sum()
+            loss = torch.gather(log_logits, -1, targets.unsqueeze(-1)).sum() / (~padding_mask).int().sum()
 
-        return logits, loss
+        return logits, loss if targets is not None else None
 
     def generate(self, X_board: torch.Tensor, X_text: torch.Tensor, max_new_tokens: int, temperature: float = 1.0, do_sample:bool = False) -> torch.Tensor:
         for _ in range(max_new_tokens):
@@ -379,6 +381,7 @@ class AlphazeroMultipleHeadsModel(L.LightningModule):
             for i in range(transformer_blocks)
         ])
 
+        target_types_and_depth = OmegaConf.to_object(target_types_and_depth)
         self.linears = nn.ModuleList([
             nn.Linear(in_features=text_embedding_size, out_features=vocab_size)
             for _ in range(len(target_types_and_depth))
@@ -419,13 +422,14 @@ class AlphazeroMultipleHeadsModel(L.LightningModule):
             decoder_outputs.append(X_text)
 
         final_logits = self.final_linear(X_text)
-        loss = None
-        count = (padding_mask == False).int().sum().item()
+        loss = torch.tensor(0)
+        count = (~padding_mask).int().sum().item()
         if targets is not None:
             loss = torch.Tensor([0]).to(final_logits.device)
-            for i, (type, depth) in enumerate(self.target_types_and_depth):
+            for i, linear in enumerate(self.linears):
+                (type, depth) = self.target_types_and_depth[i]
                 idx = is_type[:, type]
-                my_logits = self.linears[i](decoder_outputs[depth][idx])
+                my_logits = linear(decoder_outputs[depth][idx])
                 my_log_logits = -torch.nn.functional.log_softmax(my_logits, dim=-1)
                 my_log_logits = my_log_logits.masked_fill(padding_mask[idx].unsqueeze(-1), 0)
                 loss += torch.gather(my_log_logits, -1, targets[idx].unsqueeze(-1)).sum() / count
@@ -433,7 +437,7 @@ class AlphazeroMultipleHeadsModel(L.LightningModule):
             log_logits = log_logits.masked_fill(padding_mask.unsqueeze(-1), 0)
             loss += torch.gather(log_logits, -1, targets.unsqueeze(-1)).sum() / count
 
-        return final_logits, loss
+        return final_logits, loss if targets is not None else None
 
     def generate(self, X_board: torch.Tensor, X_text: torch.Tensor, max_new_tokens: int, temperature: float = 1.0, do_sample:bool = False) -> torch.Tensor:
         for _ in range(max_new_tokens):
@@ -596,13 +600,13 @@ class ActualBoardTransformerModel(L.LightningModule):
             X_boards = encoder(X_boards)
             X_text = decoder(X_boards, X_text, padding_mask)
         logits = self.linear(X_text)
-        loss = None
+        loss = torch.tensor(0)
         if targets is not None:
             log_logits = -torch.nn.functional.log_softmax(logits, dim=-1)
             log_logits = log_logits.masked_fill(padding_mask.unsqueeze(-1), 0)
-            loss = torch.gather(log_logits, -1, targets.unsqueeze(-1)).sum() / (padding_mask == False).int().sum()
+            loss = torch.gather(log_logits, -1, targets.unsqueeze(-1)).sum() / (~padding_mask).int().sum()
 
-        return logits, loss
+        return logits, loss if targets is not None else None
 
     def generate(self, X_board: torch.Tensor, X_strength, X_reps, X_state, X_text: torch.Tensor, max_new_tokens: int, temperature: float = 1.0, do_sample:bool = False) -> torch.Tensor:
         for _ in range(max_new_tokens):
@@ -729,6 +733,7 @@ class ActualBoardTransformerMultipleHeadsModel(L.LightningModule):
             for _ in range(transformer_blocks)
         ])
 
+        target_types_and_depth = OmegaConf.to_object(target_types_and_depth)
         self.target_types_and_depth = target_types_and_depth
 
         self.linears = nn.ModuleList([
@@ -757,7 +762,8 @@ class ActualBoardTransformerMultipleHeadsModel(L.LightningModule):
             X_text: torch.Tensor,                       # Batch x T
             padding_mask: torch.Tensor,                 # Batch x T
             targets: Optional[torch.Tensor] = None,     # Batch x Types
-            is_type: Optional[torch.Tensor] = None
+            is_type: Optional[torch.Tensor] = None,
+            target_type: Optional[torch.Tensor] = None
     ):    # Batch x T
 
         X_boards = self.piece_embedding(X_boards)
@@ -781,13 +787,13 @@ class ActualBoardTransformerMultipleHeadsModel(L.LightningModule):
             decoder_outputs.append(X_text)
 
         final_logits = self.final_linear(X_text)
-        loss = None
-        count = (padding_mask == False).int().sum().item()
-        if targets is not None:
-            loss = torch.Tensor([0]).to(final_logits.device)
-            for i, (type, depth) in enumerate(self.target_types_and_depth):
+        loss = torch.tensor([0]).to(final_logits.device)
+        count = (~padding_mask).int().sum().item()
+        if targets is not None and is_type is not None:
+            for i, linear in enumerate(self.linears):
+                (type, depth) = self.target_types_and_depth[i]
                 idx = is_type[:, type]
-                my_logits = self.linears[i](decoder_outputs[depth][idx])
+                my_logits = linear(decoder_outputs[depth][idx])
                 my_log_logits = -torch.nn.functional.log_softmax(my_logits, dim=-1)
                 my_log_logits = my_log_logits.masked_fill(padding_mask[idx].unsqueeze(-1), 0)
                 loss += torch.gather(my_log_logits, -1, targets[idx].unsqueeze(-1)).sum() / count
@@ -795,12 +801,19 @@ class ActualBoardTransformerMultipleHeadsModel(L.LightningModule):
             log_logits = log_logits.masked_fill(padding_mask.unsqueeze(-1), 0)
             loss += torch.gather(log_logits, -1, targets.unsqueeze(-1)).sum() / count
 
-        return final_logits, loss
+        logits = final_logits
+        if target_type is not None:
+            for i, linear in enumerate(self.linears):
+                (type, depth) = self.target_types_and_depth[i]
+                if type == target_type:
+                    logits = linear(decoder_outputs[depth])
 
-    def generate(self, X_board: torch.Tensor, X_strength, X_reps, X_state, X_text: torch.Tensor, max_new_tokens: int, temperature: float = 1.0, do_sample:bool = False) -> torch.Tensor:
+        return logits, loss if targets is not None else None
+
+    def generate(self, X_board: torch.Tensor, X_strength, X_reps, X_state, X_text: torch.Tensor, max_new_tokens: int, temperature: float = 1.0, do_sample:bool = False, target_type: Optional[int] = None) -> torch.Tensor:
         for _ in range(max_new_tokens):
             X_text_in = X_text if X_text.size(1) < self.context_length else X_text[:, -self.context_length:]
-            logits, _ = self(X_board, X_strength, X_reps, X_state, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1).to(X_board.device))
+            logits, _ = self(X_board, X_strength, X_reps, X_state, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1).to(X_board.device), target_type=target_type)
             logits = logits[:, -1, :] / temperature
             probs = torch.nn.functional.softmax(logits, dim=-1)
             if do_sample is not None:
