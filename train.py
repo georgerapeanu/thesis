@@ -36,7 +36,7 @@ def main(cfg: DictConfig) -> None:
 
     trainer = L.Trainer(
         callbacks=[
-            L.pytorch.callbacks.early_stopping.EarlyStopping(monitor="val_loss", mode="min", patience=3, verbose=False),
+            L.pytorch.callbacks.early_stopping.EarlyStopping(monitor="val_loss", mode="min", patience=10, verbose=False),
             L.pytorch.callbacks.ModelCheckpoint(monitor="val_loss", mode="min")
         ],
         default_root_dir=cfg.data.artifacts_path,

@@ -13,6 +13,7 @@ from lightning.pytorch.core.optimizer import LightningOptimizer
 from lightning.pytorch.utilities.types import STEP_OUTPUT, LRSchedulerPLType, OptimizerLRScheduler
 from omegaconf import DictConfig
 from torch.optim import Optimizer
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
 
 from data.ActualBoardDataModule import ActualBoardDataModule
@@ -847,11 +848,12 @@ class ActualBoardTransformerMultipleHeadsModel(L.LightningModule):
 
     def configure_optimizers(self):
         if self.optimizer == 'adam':
-            return torch.optim.Adam(self.parameters(), lr=self.lr)
+            optim = torch.optim.Adam(self.parameters(), lr=self.lr)
         elif self.optimizer == 'sgd':
-            return torch.optim.SGD(self.parameters(), lr=self.lr)
+            optim = torch.optim.SGD(self.parameters(), lr=self.lr)
         else:
             raise ValueError(f'Unknown optimizer: {self.optimzer}')
+        return ReduceLROnPlateau(optim, 'min', patience=3)
 
     def set_predictors(self, sp, to_predict, to_predict_metadata):
         self.predictor = ActualBoardPredictor(self.context_length, sp)
