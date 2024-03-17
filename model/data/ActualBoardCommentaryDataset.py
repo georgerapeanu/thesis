@@ -58,7 +58,7 @@ class ActualBoardCommentaryDataset(Dataset):
                         ))
 
                         self.__raw_data.append(to_add)
-                        self.__data.append(self.raw_data_to_data(to_add))
+                        self.__data.append(ActualBoardCommentaryDataset.raw_data_to_data(to_add, self.count_past_boards, self.mate_value))
                 else:
                     to_add = ((
                         past_boards[max(0, len(past_boards) - config.count_past_boards):],
@@ -68,9 +68,10 @@ class ActualBoardCommentaryDataset(Dataset):
                     ))
 
                     self.__raw_data.append(to_add)
-                    self.__data.append(self.raw_data_to_data(to_add))
+                    self.__data.append(ActualBoardCommentaryDataset.raw_data_to_data(to_add, self.count_past_boards, self.mate_value))
 
-    def __get_positional_features(self, board: chess.Board) -> torch.tensor:
+    @staticmethod
+    def get_positional_features(board: chess.Board) -> torch.tensor:
         board_stuff = torch.zeros(64, dtype=torch.int32)
 
         for i, (color, piece) in enumerate(itertools.product([chess.WHITE, chess.BLACK], [chess.PAWN, chess.ROOK, chess.KING, chess.BISHOP, chess.QUEEN, chess.KNIGHT])):
@@ -88,7 +89,8 @@ class ActualBoardCommentaryDataset(Dataset):
 
         return board_stuff, repetitions
 
-    def __get_state_features(self, board: chess.Board) -> torch.tensor:
+    @staticmethod
+    def get_state_features(board: chess.Board) -> torch.tensor:
         answer = torch.zeros((7))
         # Color -> 1
         answer[0] = ((0 if board.turn == chess.WHITE else 1))
@@ -109,28 +111,29 @@ class ActualBoardCommentaryDataset(Dataset):
 
     # repetitions, strength
     # Board x 64, Board x 1 (strength) , Board x 1 (rep), 7(state features), tokens, types
-    def raw_data_to_data(self, raw_data):
+    @staticmethod
+    def raw_data_to_data(raw_data, count_past_boards: int, mate_value: int):
         current_board, current_eval = chess.Board(raw_data[1][0]), raw_data[1][1]
         past_boards = [chess.Board(x[0]) for x in raw_data[0]]
         past_evals = [x[1] for x in raw_data[0]]
 
         boards = past_boards + [current_board]
-        processed_boards = list(map(lambda x: self.__get_positional_features(x), boards))
+        processed_boards = list(map(lambda x: ActualBoardCommentaryDataset.get_positional_features(x), boards))
         boards_tensor = torch.stack(list(map(lambda x: x[0], processed_boards)))
         reps_tensor = torch.tensor(list(map(lambda x: x[1], processed_boards))).unsqueeze(1)
         strengths_tensor = torch.tensor(past_evals + [current_eval]).unsqueeze(1)
 
-        boards_tensor = torch.cat([torch.zeros(self.count_past_boards - len(past_boards), 64), boards_tensor], dim=0)
-        strengths_tensor = torch.cat([torch.zeros(self.count_past_boards - len(past_boards), 1), strengths_tensor], dim=0)
-        reps_tensor = torch.cat([torch.zeros(self.count_past_boards - len(past_boards), 1), reps_tensor], dim=0)
+        boards_tensor = torch.cat([torch.zeros(count_past_boards - len(past_boards), 64), boards_tensor], dim=0)
+        strengths_tensor = torch.cat([torch.zeros(count_past_boards - len(past_boards), 1), strengths_tensor], dim=0)
+        reps_tensor = torch.cat([torch.zeros(count_past_boards - len(past_boards), 1), reps_tensor], dim=0)
 
-        state_tensor = self.__get_state_features(current_board)
+        state_tensor = ActualBoardCommentaryDataset.get_state_features(current_board)
 
         # return normalisations
         return (
             boards_tensor.int(),
+            strengths_tensor / mate_value,
             reps_tensor / 3.0,
-            strengths_tensor / self.mate_value,
             state_tensor,
             torch.tensor(raw_data[2]),
             raw_data[3]

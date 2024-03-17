@@ -678,8 +678,6 @@ class ActualBoardTransformerModel(L.LightningModule):
         })
 
 
-
-
 class ActualBoardTransformerMultipleHeadsModel(L.LightningModule):
     def __init__(
             self,
