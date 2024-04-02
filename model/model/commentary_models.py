@@ -118,7 +118,7 @@ class AlphazeroTransformerModel(L.LightningModule):
             logits, _ = self(X_board, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1).to(X_board.device))
             logits = logits[:, -1, :] / temperature
             probs = torch.nn.functional.softmax(logits, dim=-1)
-            if do_sample is not None:
+            if do_sample is not False:
                 text_next = torch.multinomial(probs, num_samples=1)
             else:
                 _, text_next = torch.topk(probs, k=1, dim=-1)
@@ -266,7 +266,7 @@ class AlphazeroModelResidualEncoder(L.LightningModule):
             logits, _ = self(X_board, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1).to(X_board.device))
             logits = logits[:, -1, :] / temperature
             probs = torch.nn.functional.softmax(logits, dim=-1)
-            if do_sample is not None:
+            if do_sample is not False:
                 text_next = torch.multinomial(probs, num_samples=1)
             else:
                 _, text_next = torch.topk(probs, k=1, dim=-1)
@@ -446,7 +446,7 @@ class AlphazeroMultipleHeadsModel(L.LightningModule):
             logits, _ = self(X_board, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1).to(X_board.device))
             logits = logits[:, -1, :] / temperature
             probs = torch.nn.functional.softmax(logits, dim=-1)
-            if do_sample is not None:
+            if do_sample is not False:
                 text_next = torch.multinomial(probs, num_samples=1)
             else:
                 _, text_next = torch.topk(probs, k=1, dim=-1)
@@ -615,7 +615,7 @@ class ActualBoardTransformerModel(L.LightningModule):
             logits, _ = self(X_board, X_strength, X_reps, X_state, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1).to(X_board.device))
             logits = logits[:, -1, :] / temperature
             probs = torch.nn.functional.softmax(logits, dim=-1)
-            if do_sample is not None:
+            if do_sample is not False:
                 text_next = torch.multinomial(probs, num_samples=1)
             else:
                 _, text_next = torch.topk(probs, k=1, dim=-1)
@@ -815,7 +815,7 @@ class ActualBoardTransformerMultipleHeadsModel(L.LightningModule):
             logits, _ = self(X_board, X_strength, X_reps, X_state, X_text_in, (torch.zeros(1, X_text_in.size(1)) == 1).to(X_board.device), target_type=target_type)
             logits = logits[:, -1, :] / temperature
             probs = torch.nn.functional.softmax(logits, dim=-1)
-            if do_sample is not None:
+            if do_sample is not False:
                 text_next = torch.multinomial(probs, num_samples=1)
             else:
                 _, text_next = torch.topk(probs, k=1, dim=-1)

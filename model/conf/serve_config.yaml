@@ -1,0 +1,8 @@
+count_past_boards: 2
+max_new_tokens: 1000
+model_path: ./artifacts/model.pt
+sentencepiece_path: ./artifacts/sp2000.model
+context_length: 512
+
+defaults:
+  - /data/engine_config@engine_config: default

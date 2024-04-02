@@ -45,3 +45,6 @@ def train_svm(artifacts_path: str):
 
     with open(os.path.join(artifacts_path, "svm.p"), "wb") as f:
         pickle.dump((vectorizer, classifiers), f)
+
+if __name__ == "__main__":
+    train_svm("../artifacts")
