@@ -1,3 +1,7 @@
 /processed_data/
 /raw_data/
-/artifacts/
+/artifacts/*
+!/artifacts/model.pt
+!/artifacts/commentary_types.parquet
+!/artifacts/sp2000.model
+!/artifacts/sp2000.vocab
