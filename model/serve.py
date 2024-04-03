@@ -128,12 +128,11 @@ def process():
         if max_new_tokens <= 0:
             raise ValueError("max_new_tokens should be bigger than 0")
     except json.JSONDecodeError:
-        return {"error": "JSON payload is malformed"}
+        return Response({"error": "JSON payload is malformed"}, status=400)
     except jsonschema.ValidationError:
-        return {"error": "JSON payload does not respect schema specification"}
+        return Response({"error": "JSON payload does not respect schema specification"}, status=400)
     except ValueError as e:
-        return {"error": str(e)}
-
+        return Response({"error": str(e)}, status=400)
 
     (X_board, X_strength, X_reps, X_state,  _, _) = ActualBoardCommentaryDataset.raw_data_to_data(
         (
@@ -177,8 +176,6 @@ def process():
                 if X_text.size(1) > 1:
                     skip_length = len(sp.decode(X_text[0, -2].view(-1).tolist()).replace("<n>", "\n"))
                 yield sp.decode(X_text[0, -2:].view(-1).tolist()).replace("<n>", "\n")[skip_length:]
-                # yield sp.decode(text_next.view(-1).tolist()).replace("<n>", "\n") + "\n"
-                # yield sp.decode(X_text[0, :-2].tolist()).replace("<n>", "\n")[skip_length:]
     return app.response_class(generate(), mimetype='text')
 
 
