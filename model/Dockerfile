@@ -25,4 +25,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 8080
 
 # Define the command to run the application
-CMD ["python", "serve.py"]
+ENTRYPOINT ["gunicorn", "serve:app", "-b 0.0.0.0:8080"]
