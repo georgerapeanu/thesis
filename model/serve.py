@@ -1,12 +1,6 @@
-import chess
 import flask
-import hydra
-import sentencepiece
-import stockfish
-from omegaconf import DictConfig, OmegaConf
-from flask import Flask, request, Response
+from flask import Flask, request
 import json
-from typing import *
 import jsonschema
 
 import torch

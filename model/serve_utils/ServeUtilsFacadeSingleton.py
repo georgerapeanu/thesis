@@ -16,6 +16,7 @@ import torch
 from flask import Response
 
 from data.ActualBoardCommentaryDataset import ActualBoardCommentaryDataset
+from serve_utils.SamplingStrategies import MultinomialSamplingStrategy, TopKSamplingStrategy
 
 
 class ServeUtilsFacadeSingleton(object):
@@ -128,6 +129,8 @@ class ServeUtilsFacadeSingleton(object):
             target_type = torch.tensor(self.TARGET_TYPES_TO_IDS[target_type])
         max_new_tokens = 1000 if 'max_new_tokens' not in data else data.get('max_new_tokens')
 
+        sampler = MultinomialSamplingStrategy(temperature) if do_sample else TopKSamplingStrategy(temperature)
+
         (X_board, X_strength, X_reps, X_state, _, _) = ActualBoardCommentaryDataset.raw_data_to_data(
             (
                 list(zip(past_boards, list(map(lambda x: self.__position_to_value(x), past_boards)))),
@@ -150,12 +153,8 @@ class ServeUtilsFacadeSingleton(object):
                 X_text = X_text if X_text.size(1) < self.__cfg.context_length else X_text[:, -self.__cfg.context_length:]
                 logits, _ = self.__model(X_board, X_strength, X_reps, X_state, X_text,
                                   (torch.zeros(1, X_text.size(1)) == 1).to(X_board.device), target_type=target_type)
-                logits = logits[:, -1, :] / temperature
-                probs = torch.nn.functional.softmax(logits, dim=-1)
-                if do_sample is not False:
-                    text_next = torch.multinomial(probs, num_samples=1)
-                else:
-                    _, text_next = torch.topk(probs, k=1, dim=-1)
+
+                text_next = sampler.execute(logits[:, -1, :])
                 X_text = torch.cat([X_text, text_next], dim=1)
                 if text_next == self.__model.eos_id:
                     break
