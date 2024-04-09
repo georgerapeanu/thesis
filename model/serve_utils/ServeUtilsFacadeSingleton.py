@@ -17,6 +17,8 @@ from flask import Response
 
 from data.ActualBoardCommentaryDataset import ActualBoardCommentaryDataset
 from serve_utils.SamplingStrategies import MultinomialSamplingStrategy, TopKSamplingStrategy
+from serve_utils.Validators import JsonSchemaValidator, BoardsValidator, MaxNewTokensValidator, TargetTypeValidator, \
+    TemperatureValidator
 
 
 class ServeUtilsFacadeSingleton(object):
@@ -41,33 +43,6 @@ class ServeUtilsFacadeSingleton(object):
                 "Minimum Thinking Time": self.__cfg['engine_config']['minimum_thinking_time']
             })
             self.__engine.set_depth(self.__cfg['engine_config']['engine_depth'])
-
-            self.__payload_schema = {
-                "type": "object",
-                "properties": {
-                    "past_boards": {
-                        "type": "array",
-                        "items": {"type": "string"}
-                    },
-                    "current_board": {
-                        "type": "string"
-                    },
-                    "temperature": {
-                        "type": "number"
-                    },
-                    "do_sample": {
-                        "type": "boolean"
-                    },
-                    "target_type": {
-                        "type": "string"
-                    },
-                    "max_new_tokens": {
-                        "type": "number"
-                    }
-                },
-                "required": ["past_boards", "current_board"]
-            }
-
             self.TARGET_TYPES_TO_IDS = {
                 'MoveDesc': 0,
                 'MoveQuality': 1,
@@ -75,6 +50,13 @@ class ServeUtilsFacadeSingleton(object):
                 "Strategy": 3,
                 "Context": 4
             }
+
+            validator = MaxNewTokensValidator()
+            validator = TargetTypeValidator(self.TARGET_TYPES_TO_IDS, validator)
+            validator = TemperatureValidator(validator)
+            validator = BoardsValidator(self.__cfg, validator)
+            validator = JsonSchemaValidator(validator)
+            self.__validator = validator
 
     def __evaluation_to_value(self, evaluation):
         if evaluation['type'] == 'cp':
@@ -89,33 +71,7 @@ class ServeUtilsFacadeSingleton(object):
 
     def validate_request(self, request_data):
         data = json.loads(request_data)
-        jsonschema.validate(instance=data, schema=self.__payload_schema)
-
-        past_boards = data.get('past_boards')
-        current_board = data.get('current_board')
-
-        if len(past_boards) != self.__cfg['count_past_boards']:
-            return {"error": "Length of past boards array is not the same as the one configured in config"}
-
-        for board in past_boards + [current_board]:
-            try:
-                chess.Board(board)
-            except ValueError:
-                raise ValueError("Board FEN is invalid")
-
-        temperature = 1.0 if 'temperature' not in data else data.get('temperature')
-
-        if temperature <= 0:
-            raise ValueError("Temperature should be bigger than 0")
-
-        target_type = None if 'target_type' not in data else data.get('target_type')
-
-        if target_type is not None and target_type not in self.TARGET_TYPES_TO_IDS:
-            raise ValueError("Target type is not recognized")
-        max_new_tokens = 1000 if 'max_new_tokens' not in data else data.get('max_new_tokens')
-
-        if max_new_tokens <= 0:
-            raise ValueError("max_new_tokens should be bigger than 0")
+        self.__validator.validate(data)
 
     def get_commentary(self, request_data):
         data = json.loads(request_data)
