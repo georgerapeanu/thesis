@@ -1,0 +1,71 @@
+@startuml
+
+digraph actualboard_features {
+  compound=true;
+  rankdir=LR;
+  node[shape=box]
+  fontsize=20;
+  subgraph cluster_input {
+    label="Input board features";
+    boards_image[label="", image="assets/boards.png"];
+  }
+
+  subgraph first_level_features {
+    rank=same;
+    
+    node [fixedsize=true, width=4, height=2];
+    embeddings[shape=record, label="{<input> Piece\nembedding|Cell\nembedding|<output> Board\nembedding}", fontsize=16];
+    strength_features[label="Strength features", fontsize=18];
+    reps_features[label="Repetitions", fontsize=18];
+    state_features[shape=record, label="State features|Color|Total\nmoves|Castling|No progress\ncount", fontsize=18];
+    embeddings -> strength_features -> reps_features -> state_features[style=invis];
+  }
+
+  subgraph second_level_features {
+    rank=same;
+    
+    node [fixedsize=true, width=4, height=2];
+
+    position_features[shape=record, label="{{<strength_linear> Strength\nlinear|<reps_linear> Repetitions\nlinear}|Concatenate|<output> Unsqueeze}", fontsize=15];
+    state_ffn[shape=record, label="State FFN|{<input> Linear | ReLU | <output> Linear}", fontsize=18]
+  }
+  
+  subgraph third_level_features {
+    rank=same;
+    node [fixedsize=true, width=4, height=2];
+
+    flat_and_concat[shape=record, label="{<input> Concatenate|<output> Flatten}", fontsize=20];
+  }
+
+  subgraph fourth_level_features {
+    rank=same;
+    node [fixedsize=true, width=3, height=2];
+    final_concatenate[label="Concatenate", fontsize=20];
+  }
+
+  subgraph fifth_level_features {
+    rank=same;
+    final_input_features[label="Input features", shape="plaintext", fontsize=20];
+  }
+   
+
+  boards_image -> embeddings[ltail=cluster_input];
+  boards_image -> strength_features[ltail=cluster_input];
+  boards_image -> reps_features[ltail=cluster_input];
+  boards_image -> state_features[ltail=cluster_input];
+
+  strength_features -> position_features:strength_linear;
+  reps_features -> position_features:reps_linear;
+  state_features -> state_ffn:input;
+
+  embeddings:output -> flat_and_concat:input;
+  position_features:output -> flat_and_concat:input;
+  
+  flat_and_concat:output -> final_concatenate;
+  state_ffn:output -> final_concatenate;
+
+  final_concatenate -> final_input_features;
+
+}
+
+@enduml

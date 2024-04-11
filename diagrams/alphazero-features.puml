@@ -1,0 +1,29 @@
+@startuml
+
+digraph alphazero_features {
+  compound=true
+  rankdir=LR
+  node[shape=box]
+  fontsize=20;
+  subgraph cluster_input {
+    rankdir=TB
+    label="Input board features";
+    boards_image[label="", image="assets/boards.png"];
+  }
+  
+  
+  manual_features[label="
+    Manual\nfeatures|{{Positional\nfeatures|P1 piece|P2 piece|Checks|Stength|Repetitions}|{State\nfeatures|Color|Total moves|Castling|No progress\ncount}}
+  ", color=gray, fontsize=20, shape=record];
+  conv2d[label="Conv2d\n1x1", style=filled, color="#b0f5bf", fixedsize=true, height=7, width=1.2, fontsize=20];
+  batchnorm2d[label="Batch\nNorm2d", style=filled, color="#63d6cb", fixedsize=true, height=7, width=1.2, fontsize=20];
+  relu[label="ReLU", style=filled, color="#cf4a58", fixedsize=true, height=7, width=1.2, fontsize=20];
+  input_features[label="Input\nfeatures", shape=plaintext, fixedsize=true, heigh=7, width=1.2, fontsize=20];
+  boards_image -> manual_features[ltail=cluster_input];
+  manual_features -> conv2d
+  conv2d -> batchnorm2d;
+  batchnorm2d -> relu;
+  relu -> input_features
+}
+
+@enduml

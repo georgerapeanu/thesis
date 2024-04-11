@@ -14,6 +14,7 @@ COPY ./data ./data
 COPY ./model ./model
 COPY ./tests ./tests
 COPY ./utils ./utils
+COPY ./serve_utils ./serve_utils
 COPY ./serve.py ./serve.py
 COPY ./artifacts/sp2000.model ./artifacts/sp2000.model
 COPY ./artifacts/sp2000.vocab ./artifacts/sp2000.vocab

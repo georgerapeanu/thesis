@@ -5,7 +5,7 @@ import jsonschema
 
 
 # Template
-# chain of command
+# chain of reponsibility
 
 
 class AbstractValidator:
