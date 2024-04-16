@@ -84,6 +84,7 @@ class ServeUtilsFacadeSingleton(object):
         if target_type is not None:
             target_type = torch.tensor(self.TARGET_TYPES_TO_IDS[target_type])
         max_new_tokens = 1000 if 'max_new_tokens' not in data else data.get('max_new_tokens')
+        prefix = '' if 'prefix' not in data else data.get('prefix')
 
         sampler = MultinomialSamplingStrategy(temperature) if do_sample else TopKSamplingStrategy(temperature)
 
@@ -97,7 +98,7 @@ class ServeUtilsFacadeSingleton(object):
             self.__cfg['count_past_boards'],
             self.__cfg['engine_config']['mate_value']
         )
-        X_text = torch.tensor([self.__sp.bos_id()])
+        X_text = torch.tensor([self.__sp.bos_id()] + self.__sp.encode(prefix))
         X_text = X_text.unsqueeze(0)
         X_board = X_board.unsqueeze(0)
         X_strength = X_strength.unsqueeze(0)

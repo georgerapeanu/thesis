@@ -49,6 +49,9 @@ class JsonSchemaValidator(AbstractValidator):
                 },
                 "max_new_tokens": {
                     "type": "number"
+                },
+                "prefix": {
+                    "type": "string"
                 }
             },
             "required": ["past_boards", "current_board"]
