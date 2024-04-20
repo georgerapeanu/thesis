@@ -72,8 +72,8 @@ class BoardsValidator(AbstractValidator):
         past_boards = data.get('past_boards')
         current_board = data.get('current_board')
 
-        if len(past_boards) != self.__count_past_boards:
-            raise ValueError("Length of past boards array is not the same as the one configured in config")
+        if len(past_boards) > self.__count_past_boards:
+            raise ValueError("Length of past boards array is bigger than the maximum allowed")
 
         for board in past_boards + [current_board]:
             try:

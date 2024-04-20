@@ -13,7 +13,7 @@ app = Flask(__name__)
 
 
 
-@app.get('/annotate')
+@app.post('/annotate')
 def process():
     instance = ServeUtilsFacadeSingleton()
     try:
