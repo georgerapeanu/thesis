@@ -1,0 +1,106 @@
+import { Component, Input, OnInit } from '@angular/core';
+import { GameStateService } from '../../services/game-state.service';
+import { CommonModule } from '@angular/common';
+import { Chess, Square, Move } from 'chess.js';
+
+@Component({
+  selector: 'app-board',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './board.component.html',
+  styleUrl: './board.component.css'
+})
+export class BoardComponent implements OnInit {
+  @Input() flipped: boolean = false;
+  ranks: Array<string> = [];
+  files: Array<string> = [];
+  squares: Array<string> = [];
+  lastGame: Chess | null = null;
+
+  focusedSquare: string | null = null;
+  shownMoves: Array<string> = [];
+
+  constructor(
+    private boardStateService: GameStateService
+  ) {
+    this.boardStateService = boardStateService;
+    this.boardStateService.get_observable_game().subscribe((game: Chess): void => {
+      this.updateComponentState(game, this.flipped, this.focusedSquare);
+    });
+  }
+
+  ngOnInit() {
+    this.boardStateService.set_current_fen("1nbqkbnr/rpp2pPp/8/3pP3/8/p4NPB/PPP1P2P/RNBQK2R w KQk d6 0 11");
+  }
+
+  private updateComponentState(
+    game: Chess | null,
+    flipped: boolean,
+    focusedSquare: string | null
+  ): void {
+    this.lastGame = game;
+    this.flipped = flipped;
+    this.focusedSquare = focusedSquare;
+    this.shownMoves = [];
+
+    this.ranks = Array(8).fill(1).map((_x, i) => (i + 1).toString()).reverse();
+    this.files = Array(8).fill(1).map((_x, i) => String.fromCharCode(97 + i));
+    if(this.flipped) {
+      this.files.reverse();
+      this.ranks.reverse();
+    }
+    this.squares = [];
+    for(let i = 0; i < this.ranks.length; i++) {
+      for(let j = 0; j < this.files.length; j++) {
+        this.squares.push(this.files[j] + this.ranks[i]);
+      }
+    }
+    if(this.lastGame && this.focusedSquare) {
+      for(const move of this.lastGame?.moves({verbose: true, square: (this.focusedSquare as Square)})) {
+        this.shownMoves.push((move as any as Move).to);
+      }
+    }
+    //console.log(`received ${JSON.stringify(this.shownMoves)}`);
+  }
+
+  public getImageForCell(square: string): string | null {
+    var piece = this.lastGame?.get(square as Square);
+    if(!piece) {
+      return null;
+    }
+
+    return piece.color + piece.type.toString().toUpperCase();
+  }
+
+  public isSquareByIndexBlack(index: number): boolean {
+    return !(index % 2 === Math.floor((index / 8) % 2));
+  }
+
+  public focusSquare(square: string): void {
+    this.updateComponentState(this.lastGame, this.flipped, square);
+  }
+
+  public unfocusCurrentSquare(): void {
+    this.updateComponentState(this.lastGame, this.flipped, null);
+  }
+
+  public isLegalMove(square: string): boolean {
+    return this.shownMoves.includes(square);
+  }
+
+  public isCapture(square: string): boolean {
+    return this.isLegalMove(square) && this.lastGame?.get(square as Square) != null;
+  }
+
+  public clickSquare(square: string): void {
+    if(this.shownMoves.includes(square)) {
+      //TODO
+    } else if(square !== this.focusedSquare && this.lastGame?.get(square as Square) && this.lastGame?.get(square as Square).color === this.lastGame?.turn()) {
+      this.focusSquare(square);
+    } else {
+      this.unfocusCurrentSquare();
+    }
+  }
+  //tricky moves: castling, promotions
+  // TODO implement check too
+}
