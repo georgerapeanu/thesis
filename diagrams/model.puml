@@ -1,0 +1,65 @@
+@startuml
+
+digraph model {
+  compound=true
+  rankdir=BT
+  node[shape=box]
+  fontsize=20;
+
+  subgraph cluster_blocks {
+    subgraph level0 {
+      rank=same;
+      EncoderBlock0[label="Encoder block 1"];
+      DecoderBlock0[label="Decoder block 1"];
+      
+      EncoderBlock0 -> DecoderBlock0[minlen=5];
+    }
+   
+    subgraph level1 {
+      rank=same;
+      EncoderBlock1[label="Encoder block 2"];
+      DecoderBlock1[label="Decoder block 2"];
+      
+      EncoderBlock1 -> DecoderBlock1;
+    }
+    
+    subgraph level2 {
+      rank=same;
+      EncoderLdots[label="...", shape=plaintext];
+      DecoderLdots[label="...", shape=plaintext];
+    }
+    
+    subgraph level_num_blocks {
+      rank=same;
+      EncoderNumBlocks[label="Encoder block num_blocks"];
+      DecoderNumBlocks[label="Decoder block num_blocks"];
+
+      EncoderNumBlocks -> DecoderNumBlocks;
+    }
+    
+
+    EncoderBlock0 -> EncoderBlock1 -> EncoderLdots -> EncoderNumBlocks;
+    DecoderBlock0 -> DecoderBlock1 -> DecoderLdots -> DecoderNumBlocks;
+
+  };
+
+  InputText[label="Example commentary: The king's"]
+  InputBoards[label="", image="assets/boards.png", imagescale=both, width=4, height=4, fixedsize=true];
+
+  BoardFeatures[label="Board features", fixedsize=true, width=3, height=1];
+  TextFeatures[shape=record, label="{<output> Add positional encoding|Prepend&Append&Pad|<input> Tokenize}"];
+
+  linear[label="Linear Layer"];
+  logits[shape=plaintext, label="Logits"];
+
+  InputBoards -> BoardFeatures;
+  InputText -> TextFeatures:input;
+
+  BoardFeatures -> EncoderBlock0;
+  TextFeatures:output -> DecoderBlock0;
+
+  DecoderNumBlocks -> linear -> logits;
+
+}
+
+@enduml

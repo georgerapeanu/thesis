@@ -1,0 +1,91 @@
+@startuml
+
+digraph model {
+  compound=true
+  rankdir=BT
+  node[shape=box]
+  fontsize=20;
+  
+  subgraph cluster_main_model {
+    label="Model decoder"
+    subgraph blocks {
+      subgraph level0 {
+        rank=same;
+        EncoderBlock0[label="Encoder block 1", style="invis", fixedsize=true, width=0, height=0];
+        DecoderBlock0[label="Decoder block 1"];
+        
+        EncoderBlock0 -> DecoderBlock0[minlen=10];
+      }
+     
+      subgraph level1 {
+        rank=same;
+        EncoderBlock1[label="Encoder block 2", style="invis", fixedsize=true, width=0, height=0];
+        DecoderBlock1[label="Decoder block 2"];
+        
+        EncoderBlock1 -> DecoderBlock1[minlen=10];
+      }
+      
+      subgraph level2 {
+        rank=same;
+        EncoderLdots[label="...", shape=plaintext, style="invis", fixedsize=true, width=0, height=0];
+        DecoderLdots[label="...", shape=plaintext];
+      }
+      
+      subgraph level3 {
+        rank=same;
+        EncoderTypeBlock[label="Encoder block for commentary type", style="invis", fixedsize=true, width=0, height=0];
+        DecoderTypeBlock[label="Decoder block for commentary type"];
+        EncoderTypeBlock -> DecoderTypeBlock[minlen=10];
+      }
+
+      subgraph level4 {
+        rank=same;
+        EncoderLdots2[label="...", shape=plaintext, style="invis", fixedsize=true, width=0, height=0];
+        DecoderLdots2[label="...", shape=plaintext];
+      }
+      
+      subgraph level_num_blocks {
+        rank=same;
+        EncoderNumBlocks[label="Encoder block num_blocks", style="invis", fixedsize=true, width=0, height=0];
+        DecoderNumBlocks[label="Decoder block num_blocks"];
+
+        EncoderNumBlocks -> DecoderNumBlocks[minlen=12];
+      }
+      
+
+      DecoderBlock0 -> DecoderBlock1 -> DecoderLdots -> DecoderTypeBlock -> DecoderLdots2 -> DecoderNumBlocks;
+
+    };
+
+    InputText[shape=record, label="Example commentary: The king's|Commentary type: Context"]
+
+    TextFeatures[shape=record, label="{<output> Add positional encoding|Prepend&Append&Pad|<input> Tokenize}"];
+    linear[label="Linear Layer"];
+    logits[shape=plaintext, label="Logits"];
+    
+    InputText -> TextFeatures:input;
+    TextFeatures:output -> DecoderBlock0;
+    DecoderNumBlocks -> linear -> logits;
+  };
+ 
+  subgraph test {
+    type_linear[label="Commnetary type Linear Layer"];
+   
+    type_logits[shape=plaintext, label="Commentary Logits"];
+    crossentropy2[shape=record, label="{<input> Crossentropy | <output> Softmax}"]
+    loss[label="Loss"]
+    
+    type_logits -> crossentropy2 -> loss
+    DecoderTypeBlock -> type_linear -> type_logits
+  }
+  crossentropy1[shape=record, label="{<input> Crossentropy | <output> Softmax}"]
+
+
+
+
+  logits -> crossentropy1 -> loss 
+  
+
+}
+
+@enduml

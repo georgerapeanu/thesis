@@ -1,0 +1,20 @@
+@startuml
+
+actor User
+usecase "(F1): board explorer" as F1
+usecase "(F2): seek position in game" as F2
+usecase "(F3): import game" as F3
+usecase "(F4): request model commentary" as F4
+usecase "(F5): change model settings" as F5
+usecase "(F6): see continuations" as F6
+usecase "(F7): see strength of current position" as F7
+
+User - F1
+F1 <.. F2: <<extends>>
+F1 <.. F3: <<extends>>
+F1 <.. F4: <<extends>>
+F4 <.. F5: <<extends>>
+F4 <.. F6: <<extends>>
+F1 <.. F7: <<extends>>
+
+@endump
