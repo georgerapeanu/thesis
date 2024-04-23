@@ -1,7 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { GameStateService } from '../../services/game-state.service';
 import { CommonModule } from '@angular/common';
-import { Chess, Square, Move, KING } from 'chess.js';
+import { Chess, Square, Move, KING, BLACK, PieceSymbol } from 'chess.js';
 
 @Component({
   selector: 'app-board',
@@ -20,6 +20,7 @@ export class BoardComponent implements OnInit {
   focusedSquare: string | null = null;
   shownMoves: Array<string> = [];
   lastMove: Move | null = null;
+  pendingPromotionMove: Move | null = null;
 
   constructor(
     private boardStateService: GameStateService
@@ -42,6 +43,8 @@ export class BoardComponent implements OnInit {
     this.lastGame = game;
     this.flipped = flipped;
     this.focusedSquare = focusedSquare;
+    this.pendingPromotionMove = null;
+    this.lastMove = game?.history({verbose: true}).slice(-1)[0] || null;
     this.shownMoves = [];
 
     this.ranks = Array(8).fill(1).map((_x, i) => (i + 1).toString()).reverse();
@@ -107,25 +110,58 @@ export class BoardComponent implements OnInit {
         let move_move = (move as any as Move);
         if(move_move.to === square) {
           this.unfocusCurrentSquare();
-          this.boardStateService.move(move_move);
-          this.lastMove = move_move;
+          if('promotion' in move_move) {
+            this.pendingPromotionMove = move_move;
+          } else {
+            this.lastMove = move_move;
+            this.boardStateService.move(move_move);
+          }
           return;
         }
       }
-      //TODO promotions
     } else if(square !== this.focusedSquare && this.lastGame?.get(square as Square) && this.lastGame?.get(square as Square).color === this.lastGame?.turn()) {
       this.focusSquare(square);
     } else {
       this.unfocusCurrentSquare();
     }
   }
+
   public isPartOfLastMove(square: string): boolean {
     return [this.lastMove?.from, this.lastMove?.to].includes(square as Square);
+  }
+
+  public cancelPromotion() {
+    this.unfocusCurrentSquare();
+    this.pendingPromotionMove = null;
   }
 
   onDragOver(e: DragEvent) {
     e.preventDefault();
   }
-  //tricky moves: castling, promotions
-  // TODO implement check too
+
+  public getPromotionPieces(): Array<string> {
+    if(!this.pendingPromotionMove) {
+      throw "Unexpected promotion";
+    }
+    var answer = ['Q', 'N', 'R', 'B'].map(x => this.pendingPromotionMove!.color + x);
+    if(this.flipped !== (this.pendingPromotionMove.color === BLACK)) {
+      answer.reverse();
+    }
+    return answer;
+  }
+
+  public promote(piece: string): void {
+    if(!this.pendingPromotionMove) {
+      throw "Unexpected promotion";
+    }
+    let promotion = piece[1].toLowerCase() as PieceSymbol;
+    for(const move of this.lastGame?.moves({verbose: true, square: (this.focusedSquare as Square)})!) {
+      if(move.to === this.pendingPromotionMove?.to && move.from === this.pendingPromotionMove?.from && move.promotion === promotion) {
+        this.lastMove = move;
+        this.pendingPromotionMove = null;
+        this.unfocusCurrentSquare();
+        this.boardStateService.move(move);
+      }
+    }
+  }
 }
