@@ -19,6 +19,7 @@ export class BoardComponent implements OnInit {
 
   focusedSquare: string | null = null;
   shownMoves: Array<string> = [];
+  lastMove: Move | null = null;
 
   constructor(
     private boardStateService: GameStateService
@@ -60,7 +61,6 @@ export class BoardComponent implements OnInit {
         this.shownMoves.push((move as any as Move).to);
       }
     }
-    //console.log(`received ${JSON.stringify(this.shownMoves)}`);
   }
 
   public getImageForCell(square: string): string | null {
@@ -73,7 +73,7 @@ export class BoardComponent implements OnInit {
   }
 
   public isSquareByIndexBlack(index: number): boolean {
-    return !(index % 2 === Math.floor((index / 8) % 2));
+    return !(index % 2 === Math.floor((index / 8)) % 2);
   }
 
   public focusSquare(square: string): void {
@@ -108,6 +108,8 @@ export class BoardComponent implements OnInit {
         if(move_move.to === square) {
           this.unfocusCurrentSquare();
           this.boardStateService.move(move_move);
+          this.lastMove = move_move;
+          return;
         }
       }
       //TODO promotions
@@ -116,6 +118,9 @@ export class BoardComponent implements OnInit {
     } else {
       this.unfocusCurrentSquare();
     }
+  }
+  public isPartOfLastMove(square: string): boolean {
+    return [this.lastMove?.from, this.lastMove?.to].includes(square as Square);
   }
 
   onDragOver(e: DragEvent) {
