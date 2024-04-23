@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { Chess, validateFen } from 'chess.js';
+import { Chess, Move, validateFen } from 'chess.js';
 
 @Injectable({
   providedIn: 'root'
@@ -25,5 +25,10 @@ export class GameStateService {
 
   get_current_state(): Chess {
     return this.current_game.value;
+  }
+
+  move(board_move: Move) {
+    this.current_game.value.move(board_move);
+    this.current_game.next(this.current_game.value);
   }
 }

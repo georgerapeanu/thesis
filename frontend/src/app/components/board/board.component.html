@@ -1,10 +1,12 @@
 
 <div class="w-full h-full grid grid-cols-8 grid-rows-8">
-  <div *ngFor="let square of squares;index as i" (click)="clickSquare(square)" class="relative" [class.bg-chessBlackCell] = "isSquareByIndexBlack(i)" [class.bg-chessWhiteCell] = "!isSquareByIndexBlack(i)">
+  <div *ngFor="let square of squares;index as i" (dragover)="onDragOver($event)" (drop)="clickSquare(square)"(click)="clickSquare(square)" class="relative" [attr.square]="square"[class.bg-chessBlackCell] = "isSquareByIndexBlack(i)" [class.bg-chessWhiteCell] = "!isSquareByIndexBlack(i)">
     <div *ngIf="i % 8 === 7" class="absolute text-2xl font-bold right-0 z-20" [class.text-chessBlackCell] = "!isSquareByIndexBlack(i)" [class.text-chessWhiteCell] = "isSquareByIndexBlack(i)" >{{square[1]}}</div>
     <div *ngIf="i >= 8 * 7" class="absolute text-2xl font-bold bottom-0 z-20" [class.text-chessBlackCell] = "!isSquareByIndexBlack(i)" [class.text-chessWhiteCell] = "isSquareByIndexBlack(i)" >{{square[0]}}</div>
-    <img *ngIf="getImageForCell(square)" class="relative w-full h-full z-20" [src]="'assets/' + getImageForCell(square) + '.svg'"/>
+    <img *ngIf="getImageForCell(square)" (dragend)="unfocusCurrentSquare()" (dragstart)="clickSquare(square)" class="relative w-full h-full z-20" [src]="'assets/' + getImageForCell(square) + '.svg'"/>
     <div *ngIf="square === focusedSquare" class="bg-green-900 absolute top-0 bottom-0 left-0 right-0 opacity-40 z-10"></div>
     <div *ngIf="isLegalMove(square) && !isCapture(square)" class="bg-green-900 absolute aspect-square h-1/3 top-1/3 left-1/3 rounded-full opacity-40 z-10"></div>
+    <div *ngIf="isCapture(square)" class="bg-attacked-piece absolute top-0 bottom-0 left-0 right-0 opacity-40 z-10"></div>
+    <div *ngIf="isCheck(square)" class="bg-in-check absolute top-0 bottom-0 left-0 right-0 opacity-90 z-10"></div>
   </div>
 </div>

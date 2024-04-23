@@ -1,7 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { GameStateService } from '../../services/game-state.service';
 import { CommonModule } from '@angular/common';
-import { Chess, Square, Move } from 'chess.js';
+import { Chess, Square, Move, KING } from 'chess.js';
 
 @Component({
   selector: 'app-board',
@@ -89,17 +89,37 @@ export class BoardComponent implements OnInit {
   }
 
   public isCapture(square: string): boolean {
-    return this.isLegalMove(square) && this.lastGame?.get(square as Square) != null;
+    return this.isLegalMove(square) && !!this.lastGame?.get(square as Square);
+  }
+
+  public isCheck(square: string): boolean {
+    var piece = this.lastGame?.get(square as Square);
+    if(!piece) {
+      return false;
+    }
+
+    return (piece.type === KING &&  piece.color === this.lastGame?.turn() && (this.lastGame?.inCheck() || false));
   }
 
   public clickSquare(square: string): void {
     if(this.shownMoves.includes(square)) {
-      //TODO
+      for(const move of this.lastGame?.moves({verbose: true, square: (this.focusedSquare as Square)})!) {
+        let move_move = (move as any as Move);
+        if(move_move.to === square) {
+          this.unfocusCurrentSquare();
+          this.boardStateService.move(move_move);
+        }
+      }
+      //TODO promotions
     } else if(square !== this.focusedSquare && this.lastGame?.get(square as Square) && this.lastGame?.get(square as Square).color === this.lastGame?.turn()) {
       this.focusSquare(square);
     } else {
       this.unfocusCurrentSquare();
     }
+  }
+
+  onDragOver(e: DragEvent) {
+    e.preventDefault();
   }
   //tricky moves: castling, promotions
   // TODO implement check too

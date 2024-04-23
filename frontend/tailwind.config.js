@@ -6,7 +6,12 @@ module.exports = {
     "./src/**/**/.{html,ts}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      backgroundImage: {
+        'attacked-piece': `radial-gradient(transparent 75%, ${colors['green'][900]} 75%)`,
+        'in-check': `radial-gradient(${colors['red'][600]} 45%, transparent 80%)`
+      }
+    },
     colors: {
       ...colors,
       'chessBlackCell': '#b58863',

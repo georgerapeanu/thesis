@@ -27,6 +27,8 @@ export class ModelBackendService {
       body: JSON.stringify({
         "past_boards": past_boards,
         "current_board": current_board,
+        "do_sample": true,
+        "temperature": 0.3
       })
     })
     .pipe(switchMap((result) => {
