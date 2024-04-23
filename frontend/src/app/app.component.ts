@@ -30,7 +30,7 @@ export class AppComponent {
   public requestCommentary() {
     console.log("called request");
     this.commentary = "";
-    this.modelBackendService.getAnnotation(this.gameStateService.get_current_state()).subscribe({
+    this.modelBackendService.getAnnotation(this.gameStateService.get_chess_game_at_index()).subscribe({
       next: (value => this.commentary += value),
       error: (value => alert(value))
     });

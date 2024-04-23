@@ -26,8 +26,9 @@ export class BoardComponent implements OnInit {
     private boardStateService: GameStateService
   ) {
     this.boardStateService = boardStateService;
-    this.boardStateService.get_observable_game().subscribe((game: Chess): void => {
-      this.updateComponentState(game, this.flipped, this.focusedSquare);
+    this.boardStateService.get_observable_state().subscribe((_game_index: [Chess, number]): void => {
+      let actual_game = this.boardStateService.get_chess_game_at_index();
+      this.updateComponentState(actual_game, this.flipped, this.focusedSquare, this.pendingPromotionMove);
     });
   }
 
@@ -38,12 +39,13 @@ export class BoardComponent implements OnInit {
   private updateComponentState(
     game: Chess | null,
     flipped: boolean,
-    focusedSquare: string | null
+    focusedSquare: string | null,
+    pendingPromotionMove: Move | null
   ): void {
     this.lastGame = game;
     this.flipped = flipped;
     this.focusedSquare = focusedSquare;
-    this.pendingPromotionMove = null;
+    this.pendingPromotionMove = pendingPromotionMove;
     this.lastMove = game?.history({verbose: true}).slice(-1)[0] || null;
     this.shownMoves = [];
 
@@ -80,11 +82,11 @@ export class BoardComponent implements OnInit {
   }
 
   public focusSquare(square: string): void {
-    this.updateComponentState(this.lastGame, this.flipped, square);
+    this.updateComponentState(this.lastGame, this.flipped, square, null);
   }
 
   public unfocusCurrentSquare(): void {
-    this.updateComponentState(this.lastGame, this.flipped, null);
+    this.updateComponentState(this.lastGame, this.flipped, null, this.pendingPromotionMove);
   }
 
   public isLegalMove(square: string): boolean {
@@ -109,10 +111,10 @@ export class BoardComponent implements OnInit {
       for(const move of this.lastGame?.moves({verbose: true, square: (this.focusedSquare as Square)})!) {
         let move_move = (move as any as Move);
         if(move_move.to === square) {
-          this.unfocusCurrentSquare();
           if('promotion' in move_move) {
             this.pendingPromotionMove = move_move;
           } else {
+            this.unfocusCurrentSquare();
             this.lastMove = move_move;
             this.boardStateService.move(move_move);
           }
@@ -158,8 +160,7 @@ export class BoardComponent implements OnInit {
     for(const move of this.lastGame?.moves({verbose: true, square: (this.focusedSquare as Square)})!) {
       if(move.to === this.pendingPromotionMove?.to && move.from === this.pendingPromotionMove?.from && move.promotion === promotion) {
         this.lastMove = move;
-        this.pendingPromotionMove = null;
-        this.unfocusCurrentSquare();
+        this.cancelPromotion();
         this.boardStateService.move(move);
       }
     }
