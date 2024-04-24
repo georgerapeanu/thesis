@@ -11,7 +11,7 @@ export class GameStateService {
   private subject = new BehaviorSubject<[Chess, number]>([this.current_game, this.move_index]);
   constructor() { }
 
-  set_current_fen(new_fen: string): void | Error {
+  set_current_fen(new_fen: string): Error | null {
     var validationResult = validateFen(new_fen);
     if(!validationResult['ok']) {
       return new Error(validationResult["error"]);
@@ -19,6 +19,20 @@ export class GameStateService {
     this.current_game = new Chess(new_fen);
     this.move_index = 0;
     this.subject.next([this.current_game, this.move_index]);
+    return null;
+  }
+
+  set_pgn(pgn: string): Error | null {
+    try {
+      let new_game = new Chess();
+      new_game.loadPgn(pgn);
+      this.current_game = new_game;
+      this.move_index = new_game.history().length;
+      this.subject.next([this.current_game, this.move_index]);
+      return null;
+    } catch (exception) {
+      return new Error("Invalid pgn");
+    }
   }
 
   get_observable_state(): Observable<[Chess, number]> {
