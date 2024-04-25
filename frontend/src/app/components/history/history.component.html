@@ -1,0 +1,5 @@
+<div class="w-full h-full grid grid-cols-7 bg-white overflow-scroll">
+  <div *ngFor="let move of moves_enumerated; index as i" [class.col-span-3]="(i % 3 !== 0)" [class.bg-slate-300]="(moves_indexed[i] === current_index - 1)" (click)="onClick(moves_indexed[i])">
+    {{ move }}
+  </div>
+</div>

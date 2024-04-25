@@ -1,5 +1,5 @@
 
-<div class="w-full h-full grid grid-cols-8 grid-rows-8 relative">
+<div class="w-full h-full grid grid-cols-8 grid-rows-8 relative" (keyup.ArrowLeft)="undo()" (keyup.arrowright)="redo()" (keyup.arrowup)="top()" (keyup.arrowdown)="bottom()">
   <div *ngFor="let square of squares;index as i" (dragover)="onDragOver($event)" (drop)="clickSquare(square)" (click)="clickSquare(square)" class="relative" [attr.square]="square"[class.bg-chessBlackCell] = "isSquareByIndexBlack(i)" [class.bg-chessWhiteCell] = "!isSquareByIndexBlack(i)">
     <div *ngIf="i % 8 === 7" class="absolute text-2xl font-bold right-0 z-20" [class.text-chessBlackCell] = "!isSquareByIndexBlack(i)" [class.text-chessWhiteCell] = "isSquareByIndexBlack(i)" >{{square[1]}}</div>
     <div *ngIf="i >= 8 * 7" class="absolute text-2xl font-bold bottom-0 z-20" [class.text-chessBlackCell] = "!isSquareByIndexBlack(i)" [class.text-chessWhiteCell] = "isSquareByIndexBlack(i)" >{{square[0]}}</div>

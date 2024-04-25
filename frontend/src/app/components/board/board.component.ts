@@ -23,17 +23,17 @@ export class BoardComponent implements OnInit {
   pendingPromotionMove: Move | null = null;
 
   constructor(
-    private boardStateService: GameStateService
+    private gameStateService: GameStateService
   ) {
-    this.boardStateService = boardStateService;
-    this.boardStateService.get_observable_state().subscribe((_game_index: [Chess, number]): void => {
-      let actual_game = this.boardStateService.get_chess_game_at_index();
+    this.gameStateService = gameStateService;
+    this.gameStateService.get_observable_state().subscribe((_game_index: [Chess, number]): void => {
+      let actual_game = this.gameStateService.get_chess_game_at_index();
       this.updateComponentState(actual_game, this.flipped, this.focusedSquare, this.pendingPromotionMove);
     });
   }
 
   ngOnInit() {
-    this.boardStateService.set_current_fen("1nbqkbnr/rpp2pPp/8/3pP3/8/p4NPB/PPP1P2P/RNBQK2R w KQk d6 0 11");
+    this.gameStateService.set_current_fen("1nbqkbnr/rpp2pPp/8/3pP3/8/p4NPB/PPP1P2P/RNBQK2R w KQk d6 0 11");
   }
 
   private updateComponentState(
@@ -116,7 +116,7 @@ export class BoardComponent implements OnInit {
           } else {
             this.unfocusCurrentSquare();
             this.lastMove = move_move;
-            this.boardStateService.move(move_move);
+            this.gameStateService.move(move_move);
           }
           return;
         }
@@ -161,8 +161,26 @@ export class BoardComponent implements OnInit {
       if(move.to === this.pendingPromotionMove?.to && move.from === this.pendingPromotionMove?.from && move.promotion === promotion) {
         this.lastMove = move;
         this.cancelPromotion();
-        this.boardStateService.move(move);
+        this.gameStateService.move(move);
       }
     }
   }
+
+  public undo() {
+    console.log("aaaaaa");
+    this.gameStateService.undo();
+  }
+
+  public redo() {
+    this.gameStateService.redo();
+  }
+
+  public top() {
+    this.gameStateService.seek(0);
+  }
+
+  public bottom() {
+    this.gameStateService.seek(this.gameStateService.get_current_state()[0].history().length);
+  }
+
 }

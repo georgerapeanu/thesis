@@ -44,7 +44,7 @@ export class GameStateService {
   }
 
   move(board_move: Move) {
-    while(this.current_game.history().length > this.move_index) {
+    for(let i = this.current_game.history().length; i > this.move_index; i--) {
       this.current_game.undo();
     }
     this.current_game.move(board_move);
@@ -52,23 +52,30 @@ export class GameStateService {
     this.subject.next([this.current_game, this.move_index]);
   }
 
-  seek(move_index: number): void | Error {
+  seek(move_index: number): null | Error {
     if(move_index < 0 || move_index > this.current_game.history().length + 1) {
       return new Error("move index is invalid");
     }
     this.move_index = move_index;
     this.subject.next([this.current_game, this.move_index]);
+    return null;
   }
 
-  undo(): void | Error {
+  undo(): null | Error {
     return this.seek(this.move_index - 1);
   }
 
+  redo(): null | Error {
+    return this.seek(this.move_index + 1);
+  }
+
   get_chess_game_at_index(): Chess {
-    let chess_game_at_index: Chess = new Chess();
-    chess_game_at_index.loadPgn(this.current_game.pgn());
-    while(chess_game_at_index.history().length > this.move_index) {
-      chess_game_at_index.undo();
+    if(this.move_index > 0) {
+      var chess_game_at_index: Chess = new Chess(this.current_game.history({verbose: true})[this.move_index - 1].after);
+    } else if(this.current_game.history().length > 0) {
+      var chess_game_at_index = new Chess(this.current_game.history({verbose: true})[0].before);
+    } else {
+      var chess_game_at_index = this.current_game;
     }
     return chess_game_at_index;
   }

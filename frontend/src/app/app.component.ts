@@ -6,11 +6,12 @@ import { GameStateService } from './services/game-state.service';
 import { HttpClientModule } from '@angular/common/http';
 import { GameStateComponent } from './components/game-state/game-state.component';
 import { FormsModule } from '@angular/forms';
+import { HistoryComponent } from './components/history/history.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, BoardComponent, FormsModule, HttpClientModule, GameStateComponent],
+  imports: [RouterOutlet, BoardComponent, HistoryComponent, HttpClientModule, GameStateComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
