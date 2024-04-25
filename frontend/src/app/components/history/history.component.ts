@@ -30,7 +30,7 @@ export class HistoryComponent implements OnInit {
       this.current_index = index;
        game.history().forEach((move, i) => {
         if(this.moves_indexed.length % 3 == 0) {
-          this.moves_enumerated.push(Math.round(this.moves_indexed.length / 3 + 1).toString() + ".");
+          this.moves_enumerated.push(Math.round(this.moves_indexed.length / 3 + 1).toString());
           this.moves_indexed.push(null);
         }
         this.moves_enumerated.push(move);

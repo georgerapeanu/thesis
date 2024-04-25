@@ -26,14 +26,13 @@ export class BoardComponent implements OnInit {
     private gameStateService: GameStateService
   ) {
     this.gameStateService = gameStateService;
+  }
+
+  ngOnInit() {
     this.gameStateService.get_observable_state().subscribe((_game_index: [Chess, number]): void => {
       let actual_game = this.gameStateService.get_chess_game_at_index();
       this.updateComponentState(actual_game, this.flipped, this.focusedSquare, this.pendingPromotionMove);
     });
-  }
-
-  ngOnInit() {
-    this.gameStateService.set_current_fen("1nbqkbnr/rpp2pPp/8/3pP3/8/p4NPB/PPP1P2P/RNBQK2R w KQk d6 0 11");
   }
 
   private updateComponentState(
