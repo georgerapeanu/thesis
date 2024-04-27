@@ -1,27 +1,20 @@
-<div class="h-screen bg-gray-100 m-auto">
-  <div class="h-full py-2">
-    <div class="h-full w-3/4 m-auto flex flex-row gap-3">
-      <div class="h-full w-1/4 bg-red-900"></div>
-      <div class="h-full w-2/4 flex flex-col gap-3">
-        <div class="aspect-square w-full">
-          <app-board> </app-board>
-        </div>
-        <div class="w-full h-1/3">
-          <app-game-state> </app-game-state>
-        </div>
-      </div>
-      <div class="h-[63.1%] w-1/4">
-        <app-history class="h-full w-full"> </app-history>
-      </div>
-    </div>
-  </div>
-  <!--
-  <div class="h-full flex flex-col w-1/3">
-    <app-board class="aspect-square w-full" ></app-board>
-    <app-game-state> </app-game-state>
-  </div>
-  <div class="h-full w-1/4">
-    <app-history class="h-full w-full"> </app-history>
-  </div>
-  -->
+<div class="h-screen bg-gray-100 m-auto" (keyup.arrowleft)="undo()" (keyup.arrowright)="redo()" (keyup.arrowup)="top()" (keyup.arrowdown)="bottom()">
+  <mat-grid-list cols="4" rowHeight="fit" class="h-full py-2 m-auto w-5/6">
+    <mat-grid-tile [colspan]="1" [rowspan]="4">
+        <app-model-settings class="h-full m-full p-1"></app-model-settings>
+    </mat-grid-tile>
+    <mat-grid-tile [colspan]="2" [rowspan]="4" >
+          <app-board class="h-full aspect-square py-2"> </app-board>
+    </mat-grid-tile>
+    <mat-grid-tile [colspan]="1" [rowspan]="4">
+        <app-history class="h-full w-full p-1"> </app-history>
+    </mat-grid-tile>
+    <mat-grid-tile [colspan]="1" [rowspan]="2" class="bg-red-500">
+    </mat-grid-tile>
+    <mat-grid-tile [colspan]="2" [rowspan]="2" class="bg-green-500">
+    </mat-grid-tile>
+    <mat-grid-tile [colspan]="1" [rowspan]="2">
+        <app-game-state class="h-full w-full p-1"> </app-game-state>
+    </mat-grid-tile>
+  </mat-grid-list>
 </div>

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { GameStateService } from '../../services/game-state.service';
 import { CommonModule } from '@angular/common';
 
@@ -10,6 +10,7 @@ import { CommonModule } from '@angular/common';
   styleUrl: './history.component.css'
 })
 export class HistoryComponent implements OnInit {
+
   moves_enumerated: Array<string> = [];
   moves_indexed: Array<number | null> = [];
   current_index: number = 0;
@@ -36,6 +37,7 @@ export class HistoryComponent implements OnInit {
         this.moves_enumerated.push(move);
         this.moves_indexed.push(i);
       });
+
     });
   }
 
@@ -43,7 +45,6 @@ export class HistoryComponent implements OnInit {
     if(index === null) {
       return;
     }
-    console.log("clicked ", index);
     this.gameStateService.seek(index + 1);
   }
 }

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { BoardComponent } from './components/board/board.component';
 import { ModelBackendService } from './services/model-backend.service';
@@ -7,20 +7,24 @@ import { HttpClientModule } from '@angular/common/http';
 import { GameStateComponent } from './components/game-state/game-state.component';
 import { FormsModule } from '@angular/forms';
 import { HistoryComponent } from './components/history/history.component';
+import { Subject, debounceTime } from 'rxjs';
+import { ModelSettingsComponent } from './components/model-settings/model-settings.component';
+import {MatGridListModule} from '@angular/material/grid-list';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, BoardComponent, HistoryComponent, HttpClientModule, GameStateComponent],
+  imports: [RouterOutlet, BoardComponent, HistoryComponent, ModelSettingsComponent, HttpClientModule, GameStateComponent, MatGridListModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   title = 'frontend';
 
   modelBackendService: ModelBackendService;
   gameStateService: GameStateService;
   commentary: string = "";
+  keyCommandObservable = new Subject<string>;
 
   constructor(
     modelBackendService: ModelBackendService,
@@ -30,11 +34,45 @@ export class AppComponent {
     this.gameStateService = gameStateService;
   }
 
+  ngOnInit(): void {
+    this.keyCommandObservable
+      .pipe(debounceTime(50))
+      .subscribe((key) => {
+        switch(key) {
+          case 'ArrowLeft': this.undo(); break;
+          case 'ArrowRight': this.redo(); break;
+          case 'ArrowUp': this.top(); break;
+          case 'ArrowDown': this.bottom(); break;
+        }
+      });
+  }
+
   public requestCommentary() {
     this.commentary = "";
     this.modelBackendService.getAnnotation(this.gameStateService.get_chess_game_at_index()).subscribe({
       next: (value => this.commentary += value),
       error: (value => alert(value))
     });
+  }
+
+  public undo() {
+    this.gameStateService.undo();
+  }
+
+  public redo() {
+    this.gameStateService.redo();
+  }
+
+  public top() {
+    this.gameStateService.seek(0);
+  }
+
+  public bottom() {
+    this.gameStateService.seek(this.gameStateService.get_current_state()[0].history().length);
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent): void {
+    this.keyCommandObservable.next(event.key);
   }
 }
