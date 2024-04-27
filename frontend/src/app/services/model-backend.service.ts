@@ -10,6 +10,46 @@ import { fromFetch } from "rxjs/fetch";
 })
 export class ModelBackendService {
 
+  private _temperature = 1;
+  public get temperature() {
+    return this._temperature;
+  }
+  public set temperature(value) {
+    this._temperature = value;
+  }
+
+  private _doSample = false;
+  public get doSample() {
+    return this._doSample;
+  }
+  public set doSample(value) {
+    this._doSample = value;
+  }
+
+  private _commentary_type = "";
+  public get commentary_type() {
+    return this._commentary_type;
+  }
+  public set commentary_type(value) {
+    this._commentary_type = value;
+  }
+
+  private _max_new_tokens = 1000;
+  public get max_new_tokens() {
+    return this._max_new_tokens;
+  }
+  public set max_new_tokens(value) {
+    this._max_new_tokens = value;
+  }
+
+  private _prefix = "";
+  public get prefix() {
+    return this._prefix;
+  }
+  public set prefix(value) {
+    this._prefix = value;
+  }
+
   constructor(
     private httpClient: HttpClient,
     private gameStateService: GameStateService

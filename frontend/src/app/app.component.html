@@ -1,7 +1,7 @@
 <div class="h-screen bg-gray-100 m-auto" (keyup.arrowleft)="undo()" (keyup.arrowright)="redo()" (keyup.arrowup)="top()" (keyup.arrowdown)="bottom()">
   <mat-grid-list cols="4" rowHeight="fit" class="h-full py-2 m-auto w-5/6">
     <mat-grid-tile [colspan]="1" [rowspan]="4">
-        <app-model-settings class="h-full m-full p-1"></app-model-settings>
+        <app-model-settings class="h-full w-full p-1"></app-model-settings>
     </mat-grid-tile>
     <mat-grid-tile [colspan]="2" [rowspan]="4" >
           <app-board class="h-full aspect-square py-2"> </app-board>

@@ -1,1 +1,50 @@
-<p>model-settings works!</p>
+<div class="h-full w-full text-lg flex flex-col gap-4 my-1">
+  <div class="w-full">
+    <div matTooltip="The type of commentary that the model should aim to generate"> Commentary type: </div>
+    <mat-radio-group aria-label="Select an option" [(ngModel)]="commentary_type" (ngModelChange)="updateSettings()">
+      <mat-radio-button value="MoveDesc">Move description</mat-radio-button>
+      <mat-radio-button value="MoveQuality">Move quality</mat-radio-button>
+      <mat-radio-button value="Comparative">Comparative</mat-radio-button>
+      <mat-radio-button value="Strategy">Strategy</mat-radio-button>
+      <mat-radio-button value="Context">Context</mat-radio-button>
+      <mat-radio-button value="">General</mat-radio-button>
+    </mat-radio-group>
+  </div>
+  <div class="w-full ">
+    <div class="flex w-full justify-between">
+      <div matToolTip="On if the model should sample the next token, off otherwise">Sample: </div>
+      <mat-slide-toggle [(ngModel)]="sample" (ngModelChange)="updateSettings()" color="primary"></mat-slide-toggle>
+    </div>
+  </div>
+  <div class="w-full">
+    <div class="flex w-full justify-between" >
+      <div *ngIf="sample" matTooltip="The temperature used by the model for sampling the next token.">Temperature: </div>
+      <div *ngIf="!sample" matTooltip="Only available with sample turned on">Temperature: </div>
+      <div class="font-bold"> {{temperature}} </div>
+    </div>
+    <div class="flex w-full">
+      <div class="flex justify-center items-center">{{temperature_min}}</div>
+      <mat-slider class="w-full" [min]="temperature_min" [max]="temperature_max" name="temperature"  step="0.1" discrete [displayWith]="formatLabel" color="primary" [disabled]="!sample">
+        <input matSliderThumb [(ngModel)]="temperature" (ngModelChange)="updateSettings()">
+      </mat-slider>
+      <div class="flex justify-center items-center">{{temperature_max}}</div>
+    </div>
+  </div>
+  <div class="w-full">
+    <div class="flex w-full justify-between" >
+      <div matTooltip="The maximum number of new tokens that the model should generate.">Maximum new tokens: </div>
+      <div class="font-bold"> {{max_new_tokens}} </div>
+    </div>
+    <div class="flex w-full">
+      <div class="flex justify-center items-center">{{max_new_tokens_min}}</div>
+      <mat-slider class="w-full" [min]="max_new_tokens_min" [max]="max_new_tokens_max" name="max_new_tokens"  step="max_new_tokens_step" discrete [displayWith]="formatLabel" color="primary" >
+        <input matSliderThumb [(ngModel)]="max_new_tokens" (ngModelChange)="updateSettings()">
+      </mat-slider>
+      <div class="flex justify-center items-center">{{max_new_tokens_max}}</div>
+    </div>
+  </div>
+  <div class="h-full w-full">
+    <div matTooltip="Specify a commentary prefix that you would like the model to autocomplete"> Prompt prefix: </div>
+    <textarea class="rounded-md h-full w-full bg-gray-200 text-small text-gray-900 min-h-32 pt-1" id="prefix" placeholder="Prompt prefix..." [(ngModel)]="prefix" (ngModelChange)="updateSettings()" name="prefix"></textarea>
+  </div>
+</div>
