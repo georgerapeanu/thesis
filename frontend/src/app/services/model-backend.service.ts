@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { environment } from '../..//environments/environment';
 import { GameStateService } from './game-state.service';
 import { Chess } from 'chess.js';
-import { Observable, map, switchMap, from, BehaviorSubject} from 'rxjs';
+import { Observable, map, switchMap, from, BehaviorSubject, ReadableStreamLike} from 'rxjs';
 import { fromFetch } from "rxjs/fetch";
 
 interface AnnotateRequestDict {
@@ -64,6 +64,7 @@ export class ModelBackendService {
   }
 
   private prefix_behvaior_subject = new BehaviorSubject(this.prefix);
+  private decoder = new TextDecoder("utf-8");
 
   constructor(
     private httpClient: HttpClient,
@@ -97,7 +98,13 @@ export class ModelBackendService {
       body: JSON.stringify(request_dict)
     })
     .pipe(switchMap((result) => {
-      return from(result.text());
+      if(!result.body) {
+        throw "Error reading response";
+      }
+      return from(result.body! as ReadableStreamLike<Uint8Array>);
+    }))
+    .pipe(map(bytes => {
+      return this.decoder.decode(bytes);
     }));
   }
 
