@@ -73,11 +73,11 @@ class ServeProxyUtilsFacadeSingleton(object):
             except struct.error:
                 break
 
-    def get_next_token_tensor(self, sampler: AbstractSamplingStrategy, probabilities: torch.Tensor) -> str:
+    def get_next_token_tensor(self, sampler: AbstractSamplingStrategy, probabilities: torch.Tensor) -> int:
         token = sampler.execute(probabilities).view(1).item()
-        return self.__sp.IdToPiece(token)
+        return token
 
-    def get_next_token(self, sampler, probabilities: List[float]) -> str:
+    def get_next_token(self, sampler, probabilities: List[float]) -> int:
         return self.get_next_token_tensor(sampler, torch.tensor(probabilities).view(1, -1))
 
     def get_commentary(self, request_data) -> Iterator[str]:
@@ -98,14 +98,15 @@ class ServeProxyUtilsFacadeSingleton(object):
                 probabilities = self.__cache.get(key)
                 max_new_tokens -= 1
                 token = self.get_next_token(sampler, probabilities)
+                if token == self.__sp.eos_id():
+                    max_new_tokens = 0
+                    break
+                token = self.__sp.IdToPiece(token)
                 token = token.replace("▁", " ")
                 if len(data['prefix']) == 0:
                     token = token.strip()
                 data['prefix'] += token
                 yield token
-                if token == self.__sp.eos_id():
-                    max_new_tokens = 0
-                    break
             else:
                 break
         if max_new_tokens > 0:
@@ -115,6 +116,8 @@ class ServeProxyUtilsFacadeSingleton(object):
             with s.post(self.__model_url + "/get_commentary_execution", json=data, stream=True) as resp:
                 for (probabilities, token) in self.consume_bytesio_stream(resp.raw):
                     self.__cache.set(json.dumps(data), probabilities)
+                    if token == self.__sp.eos_id():
+                        break
                     token = self.__sp.IdToPiece(token)
                     token = token.replace("▁", " ")
                     if len(data['prefix']) == 0:

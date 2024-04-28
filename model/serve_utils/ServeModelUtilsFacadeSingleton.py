@@ -120,9 +120,9 @@ class ServeModelUtilsFacadeSingleton(object):
 
                 text_next = sampler.execute(logits[:, -1, :])
                 X_text = torch.cat([X_text, text_next], dim=1)
+                yield struct.pack(f"!{self.instance.__sp.vocab_size()}fI", *logits[0, -1, :].tolist(), text_next[0, -1].item())
                 if text_next == self.__sp.eos_id():
                     break
-                yield struct.pack(f"!{self.instance.__sp.vocab_size()}fI", *logits[0, -1, :].tolist(), text_next[0, -1].item())
 
 
 if __name__ == '__main__':
