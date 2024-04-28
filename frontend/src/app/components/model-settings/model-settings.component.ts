@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {MatSliderModule} from '@angular/material/slider';
 import {MatTooltipModule} from '@angular/material/tooltip';
@@ -14,7 +14,7 @@ import { ModelBackendService } from '../../services/model-backend.service';
   templateUrl: './model-settings.component.html',
   styleUrl: './model-settings.component.css'
 })
-export class ModelSettingsComponent {
+export class ModelSettingsComponent implements OnInit {
   public temperature_min = 0.1;
   public temperature_max = 3;
   public temperature = 1.0;
@@ -28,6 +28,14 @@ export class ModelSettingsComponent {
 
   constructor(private modelBackendService: ModelBackendService) {
     this.modelBackendService = modelBackendService;
+  }
+
+  ngOnInit(): void {
+    this.temperature = this.modelBackendService.temperature;
+    this.sample = this.modelBackendService.doSample;
+    this.commentary_type = this.modelBackendService.commentary_type;
+    this.max_new_tokens = this.modelBackendService.max_new_tokens;
+    this.prefix = this.modelBackendService.prefix;
   }
 
   formatLabel(value: number): string {

@@ -9,12 +9,13 @@ import { FormsModule } from '@angular/forms';
 import { HistoryComponent } from './components/history/history.component';
 import { Subject, debounceTime } from 'rxjs';
 import { ModelSettingsComponent } from './components/model-settings/model-settings.component';
-import {MatGridListModule} from '@angular/material/grid-list';
+import { MatGridListModule } from '@angular/material/grid-list';
+import { CommentaryComponent } from './components/commentary/commentary.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, BoardComponent, HistoryComponent, ModelSettingsComponent, HttpClientModule, GameStateComponent, MatGridListModule],
+  imports: [RouterOutlet, BoardComponent, HistoryComponent, ModelSettingsComponent, CommentaryComponent, HttpClientModule, GameStateComponent, MatGridListModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
@@ -45,14 +46,6 @@ export class AppComponent implements OnInit {
           case 'ArrowDown': this.bottom(); break;
         }
       });
-  }
-
-  public requestCommentary() {
-    this.commentary = "";
-    this.modelBackendService.getAnnotation(this.gameStateService.get_chess_game_at_index()).subscribe({
-      next: (value => this.commentary += value),
-      error: (value => alert(value))
-    });
   }
 
   public undo() {

@@ -3,8 +3,20 @@ import { Injectable } from '@angular/core';
 import { environment } from '../..//environments/environment';
 import { GameStateService } from './game-state.service';
 import { Chess } from 'chess.js';
-import { Observable, map, switchMap, from} from 'rxjs';
+import { Observable, map, switchMap, from, BehaviorSubject} from 'rxjs';
 import { fromFetch } from "rxjs/fetch";
+
+interface AnnotateRequestDict {
+  past_boards: any;
+  current_board: any;
+  temperature?: any;
+  do_sample: boolean;
+  target_type?: string;
+  max_new_tokens: number;
+  prefix?: string;
+}
+
+
 @Injectable({
   providedIn: 'root'
 })
@@ -18,7 +30,7 @@ export class ModelBackendService {
     this._temperature = value;
   }
 
-  private _doSample = false;
+  private _doSample = true;
   public get doSample() {
     return this._doSample;
   }
@@ -44,11 +56,14 @@ export class ModelBackendService {
 
   private _prefix = "";
   public get prefix() {
-    return this._prefix;
+    return this._prefix.replace("<n>", "\n");
   }
   public set prefix(value) {
-    this._prefix = value;
+    this._prefix = value.replace("\n", "<n>");
+    this.prefix_behvaior_subject.next(this.prefix);
   }
+
+  private prefix_behvaior_subject = new BehaviorSubject(this.prefix);
 
   constructor(
     private httpClient: HttpClient,
@@ -62,17 +77,31 @@ export class ModelBackendService {
   getAnnotation(chess: Chess): Observable<string> {
     var current_board = chess.fen();
     var past_boards = chess.history({verbose: true}).slice(-2).map((move) => move.before);
-    return fromFetch(environment.modelURL + "/annotate", {
+    var request_dict: AnnotateRequestDict  = {
+      "past_boards": past_boards,
+      "current_board": current_board,
+      "do_sample": this._doSample,
+      "max_new_tokens": this._max_new_tokens,
+    };
+    if(this.doSample) {
+      request_dict["temperature"] = this._temperature;
+    }
+    if(this.commentary_type.length > 0) {
+      request_dict["target_type"] = this._commentary_type;
+    }
+    if(this.prefix.length > 0) {
+      request_dict["prefix"] = this._prefix;
+    }
+    return fromFetch(environment.modelURL + "/get_commentary", {
       method: "POST",
-      body: JSON.stringify({
-        "past_boards": past_boards,
-        "current_board": current_board,
-        "do_sample": true,
-        "temperature": 0.3
-      })
+      body: JSON.stringify(request_dict)
     })
     .pipe(switchMap((result) => {
       return from(result.text());
     }));
+  }
+
+  getPrefixObservable(): Observable<string> {
+    return this.prefix_behvaior_subject.asObservable();
   }
 }

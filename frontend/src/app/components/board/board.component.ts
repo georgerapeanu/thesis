@@ -30,7 +30,7 @@ export class BoardComponent implements OnInit {
 
   ngOnInit() {
     this.gameStateService.get_observable_state().subscribe((_game_index: [Chess, number]): void => {
-      let actual_game = this.gameStateService.get_chess_game_at_index();
+      let actual_game = this.gameStateService.get_chess_game_at_index(1);
       this.updateComponentState(actual_game, this.flipped, this.focusedSquare, this.pendingPromotionMove);
     });
   }
@@ -164,21 +164,4 @@ export class BoardComponent implements OnInit {
       }
     }
   }
-
-  public undo() {
-    this.gameStateService.undo();
-  }
-
-  public redo() {
-    this.gameStateService.redo();
-  }
-
-  public top() {
-    this.gameStateService.seek(0);
-  }
-
-  public bottom() {
-    this.gameStateService.seek(this.gameStateService.get_current_state()[0].history().length);
-  }
-
 }
