@@ -18,7 +18,7 @@ services:
     volumes:
       - ./:/app
     command: >
-      /bin/bash -c "cd /app && gunicorn serve_model:app -b 0.0.0.0:8080"
+      /bin/bash -c "source /app/docker_venv/bin/activate && cd /app && gunicorn serve_model:app -b 0.0.0.0:8080"
     depends_on:
       prepare_step:
         condition: service_completed_successfully
@@ -27,7 +27,7 @@ services:
     volumes:
       - ./:/app
     command: >
-      /bin/bash -c "cd /app && gunicorn serve_model:app -b 0.0.0.0:8080"
+      /bin/bash -c "source /app/docker_venv/bin/activate && cd /app && gunicorn serve_model:app -b 0.0.0.0:8080"
     ports:
       - "8080:8080"
     depends_on:
