@@ -154,3 +154,4 @@ widgetsnbextension==4.0.10
 wsproto==1.2.0
 yarl==1.9.4
 gunicorn==21.2.0
+ring==0.10.1

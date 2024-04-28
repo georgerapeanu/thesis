@@ -2,20 +2,14 @@ import flask
 from flask import Flask, request
 import json
 import jsonschema
-
-import torch
-
-from data.ActualBoardCommentaryDataset import ActualBoardCommentaryDataset
-from model.commentary_models import ActualBoardTransformerMultipleHeadsModel
-from serve_utils.ServeUtilsFacadeSingleton import ServeUtilsFacadeSingleton
+from serve_utils.ServeModelUtilsFacadeSingleton import ServeModelUtilsFacadeSingleton
 
 app = Flask(__name__)
+app.config['CORS_HEADERS'] = 'Content-Type'
 
-
-
-@app.post('/annotate')
-def process():
-    instance = ServeUtilsFacadeSingleton()
+@app.post('/get_commentary_execution')
+def get_commentary_execution():
+    instance = ServeModelUtilsFacadeSingleton()
     try:
         instance.validate_request(request.data)
     except json.JSONDecodeError:
@@ -25,7 +19,7 @@ def process():
     except ValueError as e:
         return flask.jsonify({"error": str(e)}), 400
 
-    return app.response_class(instance.get_commentary(request.data), mimetype='text')
+    return app.response_class(instance.get_commentary_probabilities(request.data), mimetype='application/octet-stream')
 
 
 if __name__ == '__main__':

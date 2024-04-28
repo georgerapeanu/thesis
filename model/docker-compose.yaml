@@ -1,0 +1,35 @@
+version: '3'
+
+services:
+  prepare_step:
+    image: python:3.12.2-bookworm
+    volumes:
+      - ./:/app
+    command: >
+      /bin/bash -c "
+            if [ ! -d /app/docker_venv ]; then
+                python3 -m venv /app/docker_venv && source /app/docker_venv/bin/activate && pip install --no-cache-dir -r /app/requirements-serve.txt
+            else
+                source /app/docker_venv/bin/activate && pip install --no-cache-dir -r /app/requirements-serve.txt
+            fi"
+
+  model:
+    image: python:3.12.2-bookworm
+    volumes:
+      - ./:/app
+    command: >
+      /bin/bash -c "cd /app && gunicorn serve_model:app -b 0.0.0.0:8080"
+    depends_on:
+      prepare_step:
+        condition: service_completed_successfully
+  proxy:
+    image: python:3.12.2-bookworm
+    volumes:
+      - ./:/app
+    command: >
+      /bin/bash -c "cd /app && gunicorn serve_model:app -b 0.0.0.0:8080"
+    ports:
+      - "8080:8080"
+    depends_on:
+      prepare_step:
+        condition: service_completed_successfully

@@ -5,3 +5,4 @@
 !/artifacts/commentary_types.parquet
 !/artifacts/sp2000.model
 !/artifacts/sp2000.vocab
+docker_venv

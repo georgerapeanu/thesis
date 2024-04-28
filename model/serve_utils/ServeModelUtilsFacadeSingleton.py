@@ -6,6 +6,7 @@ Strategy(pt modul de sampling)
 Observer pe frontend pt raspuns
 """
 import json
+from typing import Iterator, Tuple, List
 
 import chess
 import hydra
@@ -14,6 +15,8 @@ import sentencepiece
 import stockfish
 import torch
 from flask import Response
+import logging
+import struct
 
 from data.ActualBoardCommentaryDataset import ActualBoardCommentaryDataset
 from serve_utils.SamplingStrategies import MultinomialSamplingStrategy, TopKSamplingStrategy
@@ -21,19 +24,22 @@ from serve_utils.Validators import JsonSchemaValidator, BoardsValidator, MaxNewT
     TemperatureValidator
 
 
-class ServeUtilsFacadeSingleton(object):
+logger = logging.getLogger(__name__)
+
+class ServeModelUtilsFacadeSingleton(object):
     #singleton through new
     def __new__(cls):
         if not hasattr(cls, 'instance'):
-            cls.instance = super(ServeUtilsFacadeSingleton, cls).__new__(cls)
+            cls.instance = super(ServeModelUtilsFacadeSingleton, cls).__new__(cls)
             cls.instance.to_initialize = True
         return cls.instance
 
     def __init__(self):
         if hasattr(self, 'to_initialize') and self.to_initialize:
+            logger.warning("Initializing singleton utils for model")
             del self.to_initialize
             with hydra.initialize(version_base="1.2", config_path="../conf"):
-                self.__cfg = hydra.compose(config_name="serve_config")
+                self.__cfg = hydra.compose(config_name="serve_model_config")
 
             self.__model = torch.jit.load(self.__cfg["model_path"])
             self.__sp = sentencepiece.SentencePieceProcessor(self.__cfg["sentencepiece_path"])
@@ -73,7 +79,8 @@ class ServeUtilsFacadeSingleton(object):
         data = json.loads(request_data)
         self.__validator.validate(data)
 
-    def get_commentary(self, request_data):
+    def get_commentary_probabilities(self, request_data) -> Iterator[bytes]:
+        logger.warning  (f"Received request: {request_data}")
         data = json.loads(request_data)
 
         past_boards = data.get('past_boards')
@@ -113,16 +120,13 @@ class ServeUtilsFacadeSingleton(object):
 
                 text_next = sampler.execute(logits[:, -1, :])
                 X_text = torch.cat([X_text, text_next], dim=1)
-                if text_next == self.__model.eos_id:
+                if text_next == self.__sp.eos_id():
                     break
-                skip_length = 0
-                if X_text.size(1) > 1:
-                    skip_length = len(self.__sp.decode(X_text[0, -2].view(-1).tolist()).replace("<n>", "\n"))
-                yield self.__sp.decode(X_text[0, -2:].view(-1).tolist()).replace("<n>", "\n")[skip_length:]
+                yield struct.pack(f"!{self.instance.__sp.vocab_size()}fI", *logits[0, -1, :].tolist(), text_next[0, -1].item())
 
 
 if __name__ == '__main__':
-    a = ServeUtilsFacadeSingleton()
-    b = ServeUtilsFacadeSingleton()
+    a = ServeModelUtilsFacadeSingleton()
+    b = ServeModelUtilsFacadeSingleton()
 
     print(a is b)

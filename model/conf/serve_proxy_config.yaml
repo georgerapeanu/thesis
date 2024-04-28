@@ -1,0 +1,6 @@
+cache_size: 1024
+model:
+  url: "http://model:8000"
+
+defaults:
+  - serve_model_config
