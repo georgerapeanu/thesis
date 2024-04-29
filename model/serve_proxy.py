@@ -9,7 +9,9 @@ import logging
 app = Flask(__name__)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
-logger = logging.getLogger(__name__).setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 @app.post('/get_commentary')
 @cross_origin()

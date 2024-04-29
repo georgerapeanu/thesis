@@ -23,7 +23,8 @@ from serve_utils.Validators import JsonSchemaValidator, BoardsValidator, MaxNewT
     TemperatureValidator, TopKValidator
 from ring.func.lru_cache import LruCache
 
-logger = logging.getLogger(__name__).setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class ServeProxyUtilsFacadeSingleton(object):

@@ -24,7 +24,8 @@ from serve_utils.Validators import JsonSchemaValidator, BoardsValidator, MaxNewT
     TemperatureValidator
 
 
-logger = logging.getLogger(__name__).setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class ServeModelUtilsFacadeSingleton(object):
