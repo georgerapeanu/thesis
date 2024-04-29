@@ -5,20 +5,22 @@ services:
     image: python:3.12.2-bookworm
     volumes:
       - ./:/app
+      - venv:/venv
     command: >
       /bin/bash -c "
             if [ ! -d /app/docker_venv ]; then
-                python3 -m venv /app/docker_venv && source /app/docker_venv/bin/activate && pip install --no-cache-dir -r /app/requirements-serve.txt
+                python3 -m venv /venv && source /venv/bin/activate && pip install --no-cache-dir -r /app/requirements-serve.txt
             else
-                source /app/docker_venv/bin/activate && pip install --no-cache-dir -r /app/requirements-serve.txt
+                source /venv/bin/activate && pip install --no-cache-dir -r /app/requirements-serve.txt
             fi"
 
   model:
     image: python:3.12.2-bookworm
     volumes:
       - ./:/app
+      - venv:/venv
     command: >
-      /bin/bash -c "source /app/docker_venv/bin/activate && cd /app && gunicorn serve_model:app -b 0.0.0.0:8080"
+      /bin/bash -c "source /venv/bin/activate && cd /app && gunicorn serve_model:app -b 0.0.0.0:8080"
     depends_on:
       prepare_step:
         condition: service_completed_successfully
@@ -26,10 +28,14 @@ services:
     image: python:3.12.2-bookworm
     volumes:
       - ./:/app
+      - venv:/venv
     command: >
-      /bin/bash -c "source /app/docker_venv/bin/activate && cd /app && gunicorn serve_proxy:app -b 0.0.0.0:8080"
+      /bin/bash -c "source /venv/bin/activate && cd /app && gunicorn serve_proxy:app -b 0.0.0.0:8080"
     ports:
       - "8080:8080"
     depends_on:
       prepare_step:
         condition: service_completed_successfully
+
+volumes:
+  venv:

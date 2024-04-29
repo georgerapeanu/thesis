@@ -32,6 +32,7 @@ def get_commentary():
 
     return app.response_class(instance.get_commentary(request.data), mimetype='plain/text')
 
+
 @app.post('/topk')
 @cross_origin()
 def get_topk():
@@ -41,14 +42,17 @@ def get_topk():
         topk = instance.get_topk(request.data)
         return flask.jsonify(topk)
     except json.JSONDecodeError as e:
-        logger.warn("Error in payload: " + str(e))
+        logger.warning("Error in payload: " + str(e))
         return flask.jsonify({"error": "JSON payload is malformed"}), 400
     except jsonschema.ValidationError as e:
-        logger.warn("Error in payload: " + str(e))
+        logger.warning("Error in payload: " + str(e))
         return flask.jsonify({"error": "JSON payload does not respect schema specification"}), 400
     except ValueError as e:
-        logger.warn("Error in payload: " + str(e))
+        logger.warning("Error in payload: " + str(e))
         return flask.jsonify({"error": str(e)}), 200
+    except Exception as e:
+        return flask.Response("Unknown error has occurred", status=500)
+
 
 @app.get("/info")
 @cross_origin()
