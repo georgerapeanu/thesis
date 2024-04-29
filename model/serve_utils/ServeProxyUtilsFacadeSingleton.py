@@ -7,7 +7,7 @@ Observer pe frontend pt raspuns
 """
 import json
 from io import BytesIO
-from typing import Iterator, Tuple, List, Optional
+from typing import Iterator, Tuple, List, Optional, Dict
 
 import hydra
 import numpy as np
@@ -243,6 +243,12 @@ class ServeProxyUtilsFacadeSingleton(object):
 
         return list(zip(values, indices))
 
+    def get_info(self) -> Dict:
+        return {
+            'max_max_new_tokens': self.__cfg['max_new_tokens'],
+            'target_types': self.TARGET_TYPES_TO_IDS.keys(),
+            'count_past_boards': self.__cfg['count_past_boards']
+        }
 
 if __name__ == '__main__':
     a = ServeProxyUtilsFacadeSingleton()

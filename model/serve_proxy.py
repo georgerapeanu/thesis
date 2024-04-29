@@ -36,7 +36,13 @@ def get_topk():
     except jsonschema.ValidationError:
         return flask.jsonify({"error": "JSON payload does not respect schema specification"}), 400
     except ValueError as e:
-        return flask.jsonify({"error": str(e)}), 400
+        return flask.jsonify({"error": str(e)}), 200
+
+@app.get("/info")
+@cross_origin()
+def get_info():
+    instance = ServeProxyUtilsFacadeSingleton()
+    return flask.jsonify(instance.get_info()), 200
 
 
 if __name__ == '__main__':
