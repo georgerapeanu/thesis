@@ -7,7 +7,7 @@ Observer pe frontend pt raspuns
 """
 import json
 from io import BytesIO
-from typing import Iterator, Tuple, List
+from typing import Iterator, Tuple, List, Optional
 
 import hydra
 import numpy as np
@@ -136,10 +136,22 @@ class ServeProxyUtilsFacadeSingleton(object):
     def get_next_token(self, sampler, logits: List[float]) -> int:
         return self.get_next_token_tensor(sampler, torch.tensor(logits).view(1, -1))
 
+    def request_to_key(self, past_boards: List[str], current_board: str, target_type: Optional[str], prefix: str) -> str:
+        return json.dumps({
+            "past_boards": past_boards,
+            "current_board": current_board,
+            "target_type": target_type,
+            "prefix": prefix
+        })
+
+
     def get_commentary(self, request_data) -> Iterator[str]:
         logger.warning(f"Received request: {request_data}")
         data = json.loads(request_data)
 
+        past_boards = data['past_boards']
+        current_board = data['current_board']
+        target_type = None if 'target_type' not in data else data.get('target_type')
         temperature = 1.0 if 'temperature' not in data else data.get('temperature')
         do_sample = False if 'do_sample' not in data else data.get('do_sample')
         max_new_tokens = 1000 if 'max_new_tokens' not in data else data.get('max_new_tokens')
@@ -149,7 +161,12 @@ class ServeProxyUtilsFacadeSingleton(object):
         sampler = MultinomialSamplingStrategy(temperature) if do_sample else TopKSamplingStrategy(temperature)
 
         while max_new_tokens > 0:
-            key = json.dumps(data)
+            key = self.request_to_key(
+                past_boards=past_boards,
+                current_board=current_board,
+                target_type=target_type,
+                prefix=data['prefix']
+            )
             if self.__cache.has(key):
                 logits = self.__cache.get(key)
                 max_new_tokens -= 1
@@ -171,7 +188,13 @@ class ServeProxyUtilsFacadeSingleton(object):
 
             with s.post(self.__model_url + "/get_commentary_execution", json=data, stream=True) as resp:
                 for (logits, token) in self.consume_bytesio_stream(resp.raw):
-                    self.__cache.set(json.dumps(data), logits)
+                    key = self.request_to_key(
+                        past_boards=past_boards,
+                        current_board=current_board,
+                        target_type=target_type,
+                        prefix=data['prefix']
+                    )
+                    self.__cache.set(key, logits)
                     if token == self.__sp.eos_id():
                         break
                     token = self.__sp.IdToPiece(token)
@@ -193,13 +216,25 @@ class ServeProxyUtilsFacadeSingleton(object):
         else:
             topk = 10
 
-        if not self.__cache.has(json.dumps(data)):
+        past_boards = data['past_boards']
+        current_board = data['current_board']
+        target_type = None if 'target_type' not in data else data.get('target_type')
+        prefix = '' if 'prefix' not in data else data.get('prefix')
+        data['prefix'] = prefix
+
+        key = self.request_to_key(
+            past_boards=past_boards,
+            current_board=current_board,
+            target_type=target_type,
+            prefix=data['prefix']
+        )
+        if not self.__cache.has(key):
             s = requests.Session()
 
             with s.post(self.__model_url + "/get_commentary_execution", json=data, stream=True) as resp:
                 logits, _ = next(self.consume_bytesio_stream(resp.raw))
-            self.__cache.set(json.dumps(data), logits)
-        logits = self.__cache.get(json.dumps(data))
+            self.__cache.set(key, logits)
+        logits = self.__cache.get(key)
 
         probabilities = torch.nn.functional.softmax(torch.tensor(logits), dim=-1)
         values, indices = torch.topk(probabilities, k=topk, dim=-1)
