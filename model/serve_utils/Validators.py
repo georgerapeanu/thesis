@@ -93,7 +93,7 @@ class MaxNewTokensValidator(AbstractValidator):
         if not isinstance(max_new_tokens, int):
             raise ValueError("Topk max should be an integer")
 
-        if max_new_tokens <= 0 or max_new_tokens <= self.max_max_new_tokens:
+        if max_new_tokens <= 0 or max_new_tokens > self.max_max_new_tokens:
             raise ValueError(f"max_new_tokens should be bigger than 0 and less than or equal to {self.max_max_new_tokens}")
 
 
