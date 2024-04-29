@@ -4,22 +4,28 @@ import json
 import jsonschema
 from flask_cors import CORS, cross_origin
 from serve_utils.ServeProxyUtilsFacadeSingleton import ServeProxyUtilsFacadeSingleton
+import logging
 
 app = Flask(__name__)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
+logger = logging.getLogger(__name__).setLevel(logging.INFO)
 
 @app.post('/get_commentary')
 @cross_origin()
 def get_commentary():
     instance = ServeProxyUtilsFacadeSingleton()
     try:
+        logger.info(f"Get commentary: Received request {request.data} ")
         instance.validate_commentary_request(request.data)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        logger.warn("Error in payload: " + str(e))
         return flask.jsonify({"error": "JSON payload is malformed"}), 400
-    except jsonschema.ValidationError:
+    except jsonschema.ValidationError as e:
+        logger.warn("Error in payload: " + str(e))
         return flask.jsonify({"error": "JSON payload does not respect schema specification"}), 400
     except ValueError as e:
+        logger.warn("Error in payload: " + str(e))
         return flask.jsonify({"error": str(e)}), 400
 
     return app.response_class(instance.get_commentary(request.data), mimetype='plain/text')
@@ -29,18 +35,23 @@ def get_commentary():
 def get_topk():
     instance = ServeProxyUtilsFacadeSingleton()
     try:
+        logger.info(f"Get TopK: Received request {request.data} ")
         topk = instance.get_topk(request.data)
         return flask.jsonify(topk)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        logger.warn("Error in payload: " + str(e))
         return flask.jsonify({"error": "JSON payload is malformed"}), 400
-    except jsonschema.ValidationError:
+    except jsonschema.ValidationError as e:
+        logger.warn("Error in payload: " + str(e))
         return flask.jsonify({"error": "JSON payload does not respect schema specification"}), 400
     except ValueError as e:
+        logger.warn("Error in payload: " + str(e))
         return flask.jsonify({"error": str(e)}), 200
 
 @app.get("/info")
 @cross_origin()
 def get_info():
+    logger.info(f"Get Info")
     instance = ServeProxyUtilsFacadeSingleton()
     return flask.jsonify(instance.get_info()), 200
 

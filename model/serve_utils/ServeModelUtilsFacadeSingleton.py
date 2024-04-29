@@ -24,7 +24,8 @@ from serve_utils.Validators import JsonSchemaValidator, BoardsValidator, MaxNewT
     TemperatureValidator
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__).setLevel(logging.INFO)
+
 
 class ServeModelUtilsFacadeSingleton(object):
     #singleton through new
@@ -107,7 +108,6 @@ class ServeModelUtilsFacadeSingleton(object):
         self.__commentary_validator.validate(data)
 
     def get_commentary_probabilities(self, request_data) -> Iterator[bytes]:
-        logger.warning  (f"Received request: {request_data}")
         data = json.loads(request_data)
 
         past_boards = data.get('past_boards')

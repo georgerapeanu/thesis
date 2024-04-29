@@ -23,7 +23,7 @@ from serve_utils.Validators import JsonSchemaValidator, BoardsValidator, MaxNewT
     TemperatureValidator, TopKValidator
 from ring.func.lru_cache import LruCache
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__).setLevel(logging.INFO)
 
 
 class ServeProxyUtilsFacadeSingleton(object):
@@ -36,6 +36,7 @@ class ServeProxyUtilsFacadeSingleton(object):
 
     def __init__(self):
         if hasattr(self, 'to_initialize') and self.to_initialize:
+            logger.warning("Initializing singleton utils for proxy")
             del self.to_initialize
             with hydra.initialize(version_base="1.2", config_path="../conf"):
                 self.__cfg = hydra.compose(config_name="serve_proxy_config")
@@ -146,7 +147,6 @@ class ServeProxyUtilsFacadeSingleton(object):
 
 
     def get_commentary(self, request_data) -> Iterator[str]:
-        logger.warning(f"Received request: {request_data}")
         data = json.loads(request_data)
 
         past_boards = data['past_boards']
@@ -160,6 +160,8 @@ class ServeProxyUtilsFacadeSingleton(object):
 
         sampler = MultinomialSamplingStrategy(temperature) if do_sample else TopKSamplingStrategy(temperature)
 
+        count_cache_hit, count_cache_miss = 0, 0
+
         while max_new_tokens > 0:
             key = self.request_to_key(
                 past_boards=past_boards,
@@ -168,6 +170,7 @@ class ServeProxyUtilsFacadeSingleton(object):
                 prefix=data['prefix']
             )
             if self.__cache.has(key):
+                count_cache_hit += 1
                 logits = self.__cache.get(key)
                 max_new_tokens -= 1
                 token = self.get_next_token(sampler, logits)
@@ -188,6 +191,7 @@ class ServeProxyUtilsFacadeSingleton(object):
 
             with s.post(self.__model_url + "/get_commentary_execution", json=data, stream=True) as resp:
                 for (logits, token) in self.consume_bytesio_stream(resp.raw):
+                    count_cache_miss += 1
                     key = self.request_to_key(
                         past_boards=past_boards,
                         current_board=current_board,
@@ -203,6 +207,7 @@ class ServeProxyUtilsFacadeSingleton(object):
                         token = token.strip()
                     data['prefix'] += token
                     yield token
+        logger.info(f"Cache hit/Cache miss/Total hits%: {count_cache_hit}/{count_cache_miss}/{count_cache_hit / (count_cache_hit + count_cache_miss)}")
 
     def get_topk(self, request_data) -> List[Tuple[str, float]]:
         logger.info("received topk request_data: {}".format(request_data))
@@ -229,6 +234,7 @@ class ServeProxyUtilsFacadeSingleton(object):
             prefix=data['prefix']
         )
         if not self.__cache.has(key):
+            logger.info("Cache miss")
             s = requests.Session()
 
             with s.post(self.__model_url + "/get_commentary_execution", json=data, stream=True) as resp:
