@@ -11,10 +11,10 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 
 @app.post('/get_commentary')
 @cross_origin()
-def get_commentary_execution():
+def get_commentary():
     instance = ServeProxyUtilsFacadeSingleton()
     try:
-        instance.validate_request(request.data)
+        instance.validate_commentary_request(request.data)
     except json.JSONDecodeError:
         return flask.jsonify({"error": "JSON payload is malformed"}), 400
     except jsonschema.ValidationError:
@@ -23,6 +23,20 @@ def get_commentary_execution():
         return flask.jsonify({"error": str(e)}), 400
 
     return app.response_class(instance.get_commentary(request.data), mimetype='plain/text')
+
+@app.post('/topk')
+@cross_origin()
+def get_topk():
+    instance = ServeProxyUtilsFacadeSingleton()
+    try:
+        topk = instance.get_topk(request.data)
+        return flask.jsonify(topk)
+    except json.JSONDecodeError:
+        return flask.jsonify({"error": "JSON payload is malformed"}), 400
+    except jsonschema.ValidationError:
+        return flask.jsonify({"error": "JSON payload does not respect schema specification"}), 400
+    except ValueError as e:
+        return flask.jsonify({"error": str(e)}), 400
 
 
 if __name__ == '__main__':

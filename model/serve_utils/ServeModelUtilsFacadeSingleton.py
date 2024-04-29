@@ -57,12 +57,39 @@ class ServeModelUtilsFacadeSingleton(object):
                 "Context": 4
             }
 
-            validator = MaxNewTokensValidator()
+            validator = MaxNewTokensValidator(self.__cfg['max_new_tokens'], self.__cfg['max_new_tokens'])
             validator = TargetTypeValidator(self.TARGET_TYPES_TO_IDS, validator)
             validator = TemperatureValidator(validator)
             validator = BoardsValidator(self.__cfg, validator)
-            validator = JsonSchemaValidator(validator)
-            self.__validator = validator
+            validator = JsonSchemaValidator({
+                "type": "object",
+                "properties": {
+                    "past_boards": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
+                    "current_board": {
+                        "type": "string"
+                    },
+                    "temperature": {
+                        "type": "number"
+                    },
+                    "do_sample": {
+                        "type": "boolean"
+                    },
+                    "target_type": {
+                        "type": "string"
+                    },
+                    "max_new_tokens": {
+                        "type": "number"
+                    },
+                    "prefix": {
+                        "type": "string"
+                    }
+                },
+                "required": ["past_boards", "current_board"]
+            }, validator)
+            self.__commentary_validator = validator
 
     def __evaluation_to_value(self, evaluation):
         if evaluation['type'] == 'cp':
@@ -75,9 +102,9 @@ class ServeModelUtilsFacadeSingleton(object):
         self.__engine.set_fen_position(position)
         return self.__evaluation_to_value(self.__engine.get_evaluation())
 
-    def validate_request(self, request_data):
+    def validate_commentary_request(self, request_data):
         data = json.loads(request_data)
-        self.__validator.validate(data)
+        self.__commentary_validator.validate(data)
 
     def get_commentary_probabilities(self, request_data) -> Iterator[bytes]:
         logger.warning  (f"Received request: {request_data}")

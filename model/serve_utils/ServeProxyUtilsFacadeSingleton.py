@@ -10,6 +10,7 @@ from io import BytesIO
 from typing import Iterator, Tuple, List
 
 import hydra
+import numpy as np
 import requests
 import sentencepiece
 import logging
@@ -19,7 +20,7 @@ import torch
 
 from serve_utils.SamplingStrategies import MultinomialSamplingStrategy, TopKSamplingStrategy, AbstractSamplingStrategy
 from serve_utils.Validators import JsonSchemaValidator, BoardsValidator, MaxNewTokensValidator, TargetTypeValidator, \
-    TemperatureValidator
+    TemperatureValidator, TopKValidator
 from ring.func.lru_cache import LruCache
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,6 @@ class ServeProxyUtilsFacadeSingleton(object):
                 self.__cfg = hydra.compose(config_name="serve_proxy_config")
 
             self.__sp = sentencepiece.SentencePieceProcessor(self.__cfg["sentencepiece_path"])
-            validator = MaxNewTokensValidator()
             self.TARGET_TYPES_TO_IDS = {
                 'MoveDesc': 0,
                 'MoveQuality': 1,
@@ -48,17 +48,73 @@ class ServeProxyUtilsFacadeSingleton(object):
                 "Strategy": 3,
                 "Context": 4
             }
-            validator = TargetTypeValidator(self.TARGET_TYPES_TO_IDS, validator)
+            validator = TargetTypeValidator(self.TARGET_TYPES_TO_IDS)
             validator = TemperatureValidator(validator)
             validator = BoardsValidator(self.__cfg, validator)
-            validator = JsonSchemaValidator(validator)
-            self.__validator = validator
+            self.__commentary_validator = JsonSchemaValidator({
+                "type": "object",
+                "properties": {
+                    "past_boards": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
+                    "current_board": {
+                        "type": "string"
+                    },
+                    "temperature": {
+                        "type": "number"
+                    },
+                    "do_sample": {
+                        "type": "boolean"
+                    },
+                    "target_type": {
+                        "type": "string"
+                    },
+                    "max_new_tokens": {
+                        "type": "number"
+                    },
+                    "prefix": {
+                        "type": "string"
+                    }
+                },
+                "required": ["past_boards", "current_board"]
+            }, MaxNewTokensValidator(self.__cfg['max_new_tokens'], self.__cfg['max_new_tokens'], validator))
+
+            validator = TopKValidator(self.__cfg['topk_max'], validator)
+            self.__topk_validator = JsonSchemaValidator({
+                "type": "object",
+                "properties": {
+                    "past_boards": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    },
+                    "current_board": {
+                        "type": "string"
+                    },
+                    "temperature": {
+                        "type": "number"
+                    },
+                    "do_sample": {
+                        "type": "boolean"
+                    },
+                    "target_type": {
+                        "type": "string"
+                    },
+                    "prefix": {
+                        "type": "string"
+                    },
+                    "topk": {
+                        "type": "number"
+                    }
+                },
+                "required": ["past_boards", "current_board"]
+            }, validator)
             self.__cache = LruCache(maxsize=self.__cfg["cache_size"])
             self.__model_url = self.__cfg["model"]["url"]
 
-    def validate_request(self, request_data):
+    def validate_commentary_request(self, request_data):
         data = json.loads(request_data)
-        self.__validator.validate(data)
+        self.__commentary_validator.validate(data)
 
     def unpack(self, stream, fmt):
         size = struct.calcsize(fmt)
@@ -73,12 +129,12 @@ class ServeProxyUtilsFacadeSingleton(object):
             except struct.error:
                 break
 
-    def get_next_token_tensor(self, sampler: AbstractSamplingStrategy, probabilities: torch.Tensor) -> int:
-        token = sampler.execute(probabilities).view(1).item()
+    def get_next_token_tensor(self, sampler: AbstractSamplingStrategy, logits: torch.Tensor) -> int:
+        token = sampler.execute(logits).view(1).item()
         return token
 
-    def get_next_token(self, sampler, probabilities: List[float]) -> int:
-        return self.get_next_token_tensor(sampler, torch.tensor(probabilities).view(1, -1))
+    def get_next_token(self, sampler, logits: List[float]) -> int:
+        return self.get_next_token_tensor(sampler, torch.tensor(logits).view(1, -1))
 
     def get_commentary(self, request_data) -> Iterator[str]:
         logger.warning(f"Received request: {request_data}")
@@ -95,9 +151,9 @@ class ServeProxyUtilsFacadeSingleton(object):
         while max_new_tokens > 0:
             key = json.dumps(data)
             if self.__cache.has(key):
-                probabilities = self.__cache.get(key)
+                logits = self.__cache.get(key)
                 max_new_tokens -= 1
-                token = self.get_next_token(sampler, probabilities)
+                token = self.get_next_token(sampler, logits)
                 if token == self.__sp.eos_id():
                     max_new_tokens = 0
                     break
@@ -114,8 +170,8 @@ class ServeProxyUtilsFacadeSingleton(object):
             s = requests.Session()
 
             with s.post(self.__model_url + "/get_commentary_execution", json=data, stream=True) as resp:
-                for (probabilities, token) in self.consume_bytesio_stream(resp.raw):
-                    self.__cache.set(json.dumps(data), probabilities)
+                for (logits, token) in self.consume_bytesio_stream(resp.raw):
+                    self.__cache.set(json.dumps(data), logits)
                     if token == self.__sp.eos_id():
                         break
                     token = self.__sp.IdToPiece(token)
@@ -124,6 +180,33 @@ class ServeProxyUtilsFacadeSingleton(object):
                         token = token.strip()
                     data['prefix'] += token
                     yield token
+
+    def get_topk(self, request_data) -> List[Tuple[str, float]]:
+        logger.info("received topk request_data: {}".format(request_data))
+        data = json.loads(request_data)
+        self.__topk_validator.validate(data)
+
+        data['max_new_tokens'] = 1
+        if 'topk' in data:
+            topk = data.get('topk')
+            del data['topk']
+        else:
+            topk = 10
+
+        if not self.__cache.has(json.dumps(data)):
+            s = requests.Session()
+
+            with s.post(self.__model_url + "/get_commentary_execution", json=data, stream=True) as resp:
+                logits, _ = next(self.consume_bytesio_stream(resp.raw))
+            self.__cache.set(json.dumps(data), logits)
+        logits = self.__cache.get(json.dumps(data))
+
+        probabilities = torch.nn.functional.softmax(torch.tensor(logits), dim=-1)
+        values, indices = torch.topk(probabilities, k=topk, dim=-1)
+        values = values.tolist()
+        indices = list(map(lambda i: self.__sp.IdToPiece(i), indices.tolist()))
+
+        return list(zip(values, indices))
 
 
 if __name__ == '__main__':

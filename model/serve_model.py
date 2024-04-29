@@ -11,7 +11,7 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 def get_commentary_execution():
     instance = ServeModelUtilsFacadeSingleton()
     try:
-        instance.validate_request(request.data)
+        instance.validate_commentary_request(request.data)
     except json.JSONDecodeError:
         return flask.jsonify({"error": "JSON payload is malformed"}), 400
     except jsonschema.ValidationError:

@@ -1,6 +1,7 @@
 cache_size: 1024
 model:
   url: "http://model:8080"
+topk_max: 10
 
 defaults:
   - serve_model_config

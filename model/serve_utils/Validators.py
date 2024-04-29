@@ -26,36 +26,9 @@ class AbstractValidator:
 
 
 class JsonSchemaValidator(AbstractValidator):
-    def __init__(self, next_validator=None):
+    def __init__(self, payload_schema, next_validator=None):
         super().__init__(next_validator)
-        self.__payload_schema = {
-            "type": "object",
-            "properties": {
-                "past_boards": {
-                    "type": "array",
-                    "items": {"type": "string"}
-                },
-                "current_board": {
-                    "type": "string"
-                },
-                "temperature": {
-                    "type": "number"
-                },
-                "do_sample": {
-                    "type": "boolean"
-                },
-                "target_type": {
-                    "type": "string"
-                },
-                "max_new_tokens": {
-                    "type": "number"
-                },
-                "prefix": {
-                    "type": "string"
-                }
-            },
-            "required": ["past_boards", "current_board"]
-        }
+        self.__payload_schema = payload_schema
 
     @abstractmethod
     def _validate_self(self, data):
@@ -108,12 +81,33 @@ class TargetTypeValidator(AbstractValidator):
 
 
 class MaxNewTokensValidator(AbstractValidator):
-    def __init__(self, next_validator=None):
+    def __init__(self, max_max_new_tokens, default_max_new_tokens, next_validator=None):
+        self.max_max_new_tokens = max_max_new_tokens
+        self.default_max_new_tokens = default_max_new_tokens
         super().__init__(next_validator)
 
     @abstractmethod
     def _validate_self(self, data):
-        max_new_tokens = 1000 if 'max_new_tokens' not in data else data.get('max_new_tokens')
+        max_new_tokens = self.default_max_new_tokens if 'max_new_tokens' not in data else data.get('max_new_tokens')
 
-        if max_new_tokens <= 0:
-            raise ValueError("max_new_tokens should be bigger than 0")
+        if not isinstance(max_new_tokens, int):
+            raise ValueError("Topk max should be an integer")
+
+        if max_new_tokens <= 0 or max_new_tokens <= self.max_max_new_tokens:
+            raise ValueError(f"max_new_tokens should be bigger than 0 and less than or equal to {self.max_max_new_tokens}")
+
+
+class TopKValidator(AbstractValidator):
+    def __init__(self, topk_max: int, next_validator=None):
+        super().__init__(next_validator)
+        self.topk_max = topk_max
+
+    @abstractmethod
+    def _validate_self(self, data):
+        topk_max = 10 if 'topk_max' not in data else data.get('topk_max')
+
+        if not isinstance(topk_max, int):
+            raise ValueError("Topk max should be an integer")
+
+        if topk_max <= 0 or topk_max > self.topk_max:
+            raise ValueError(f"Topk should be between 1 and {self.topk_max}")
