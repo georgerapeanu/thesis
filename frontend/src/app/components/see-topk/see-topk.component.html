@@ -1,0 +1,12 @@
+<div class="h-full text-gray-800 w-full text-base flex flex-col gap-1">
+  <div class="text-2xl font-semibold">
+    Next token
+  </div>
+  <div *ngFor="let prob_token of topk" class="w-full justify-between flex" (click)="onClick(prob_token)">
+    <div> {{prob_token[1]}} </div>
+    <div class="w-4/5 flex flex-row-reverse gap-1">
+      <div class="bg-indigo-600 text-white" style="width: {{prob_token[0]}}%">  </div>
+      <div> {{prob_token[0]}}% </div>
+    </div>
+  </div>
+</div>

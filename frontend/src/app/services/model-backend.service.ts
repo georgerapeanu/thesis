@@ -1,9 +1,8 @@
-import { HttpClient, HttpDownloadProgressEvent, HttpEvent, HttpEventType } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from '../..//environments/environment';
 import { GameStateService } from './game-state.service';
 import { Chess } from 'chess.js';
-import { Observable, map, switchMap, from, BehaviorSubject, ReadableStreamLike} from 'rxjs';
+import { Observable, map, switchMap, from, BehaviorSubject, ReadableStreamLike, Subject, merge, debounceTime} from 'rxjs';
 import { fromFetch } from "rxjs/fetch";
 
 interface AnnotateRequestDict {
@@ -14,6 +13,14 @@ interface AnnotateRequestDict {
   target_type?: string;
   max_new_tokens: number;
   prefix?: string;
+}
+
+interface TopKRequestDict {
+  past_boards: any;
+  current_board: any;
+  target_type?: string;
+  prefix?: string;
+  temperature?: any;
 }
 
 
@@ -27,6 +34,9 @@ export class ModelBackendService {
     return this._temperature;
   }
   public set temperature(value) {
+    if(value !== this._temperature) {
+      this.topk_settings_change.next(null);
+    }
     this._temperature = value;
   }
 
@@ -43,6 +53,9 @@ export class ModelBackendService {
     return this._commentary_type;
   }
   public set commentary_type(value) {
+    if(value !== this._commentary_type) {
+      this.topk_settings_change.next(null);
+    }
     this._commentary_type = value;
   }
 
@@ -59,20 +72,36 @@ export class ModelBackendService {
     return this._prefix.replace("<n>", "\n");
   }
   public set prefix(value) {
+    if(value !== this.prefix) {
+      this.topk_settings_change.next(null);
+    }
     this._prefix = value.replace("\n", "<n>");
     this.prefix_behvaior_subject.next(this.prefix);
   }
 
   private prefix_behvaior_subject = new BehaviorSubject(this.prefix);
+  private topk_settings_change = new Subject<null>();
   private decoder = new TextDecoder("utf-8");
+  private topk_behavior_subject = new BehaviorSubject<Array<[number, string]>>([]);
+
 
   constructor(
-    private httpClient: HttpClient,
     private gameStateService: GameStateService
   ) {
 
-    this.httpClient = httpClient;
     this.gameStateService = gameStateService;
+
+    merge(
+      this.gameStateService.get_observable_state().pipe(map((_value) => null)),
+      this.topk_settings_change.asObservable()
+    )
+    .pipe(debounceTime(200))
+    .subscribe((_) => {
+      this.getTopK(this.gameStateService.get_chess_game_at_index(2))
+      .subscribe((value) => {
+        this.topk_behavior_subject.next(value);
+      });
+    })
   }
 
   getAnnotation(chess: Chess): Observable<string> {
@@ -108,7 +137,34 @@ export class ModelBackendService {
     }));
   }
 
+  getTopK(chess: Chess): Observable<Array<[number, string]>> {
+    var current_board = chess.fen();
+    var past_boards = chess.history({verbose: true}).slice(-2).map((move) => move.before);
+    var request_dict: TopKRequestDict  = {
+      "past_boards": past_boards,
+      "current_board": current_board,
+    };
+    if(this.commentary_type.length > 0) {
+      request_dict["target_type"] = this._commentary_type;
+    }
+    if(this.prefix.length > 0) {
+      request_dict["prefix"] = this._prefix;
+    }
+    request_dict["temperature"] = this._temperature;
+    return fromFetch(environment.modelURL + "/topk", {
+      method: "POST",
+      body: JSON.stringify(request_dict)
+    })
+    .pipe(switchMap(response => {
+      return from(response.json());
+    }));
+  }
+
   getPrefixObservable(): Observable<string> {
     return this.prefix_behvaior_subject.asObservable();
+  }
+
+  getTopKObservable(): Observable<Array<[number, string]>> {
+    return this.topk_behavior_subject.asObservable();
   }
 }

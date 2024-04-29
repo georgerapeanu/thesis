@@ -1,21 +1,22 @@
 <div class="h-screen bg-gray-100 m-auto">
   <mat-grid-list cols="4" rowHeight="fit" class="h-full m-auto w-5/6" gutterSize="20px" >
     <mat-grid-tile [colspan]="1" [rowspan]="5">
-        <app-model-settings class="h-full w-full py-2"></app-model-settings>
+      <app-model-settings class="h-full w-full py-2"></app-model-settings>
     </mat-grid-tile>
     <mat-grid-tile [colspan]="2" [rowspan]="5" >
-          <app-board class="w-full aspect-square py-2"> </app-board>
+      <app-board class="w-full aspect-square py-2"> </app-board>
     </mat-grid-tile>
     <mat-grid-tile [colspan]="1" [rowspan]="5">
-        <app-history class="h-full w-full py-2"> </app-history>
-    </mat-grid-tile>
-    <mat-grid-tile [colspan]="1" [rowspan]="2" class="bg-red-500">
-    </mat-grid-tile>
-    <mat-grid-tile [colspan]="2" [rowspan]="2">
-        <app-commentary class="h-full w-full py-2"> </app-commentary>
+      <app-history class="h-full w-full py-2"> </app-history>
     </mat-grid-tile>
     <mat-grid-tile [colspan]="1" [rowspan]="2">
-        <app-game-state class="h-full w-full py-2"> </app-game-state>
+      <app-see-topk class="h-full w-full py-2"> </app-see-topk>
+    </mat-grid-tile>
+    <mat-grid-tile [colspan]="2" [rowspan]="2">
+      <app-commentary class="h-full w-full py-2"> </app-commentary>
+    </mat-grid-tile>
+    <mat-grid-tile [colspan]="1" [rowspan]="2">
+      <app-game-state class="h-full w-full py-2"> </app-game-state>
     </mat-grid-tile>
   </mat-grid-list>
 </div>

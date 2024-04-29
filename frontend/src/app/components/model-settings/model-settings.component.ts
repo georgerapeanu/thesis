@@ -36,6 +36,10 @@ export class ModelSettingsComponent implements OnInit {
     this.commentary_type = this.modelBackendService.commentary_type;
     this.max_new_tokens = this.modelBackendService.max_new_tokens;
     this.prefix = this.modelBackendService.prefix;
+
+    this.modelBackendService.getPrefixObservable().subscribe((value) => {
+      this.prefix = value;
+    });
   }
 
   formatLabel(value: number): string {

@@ -15,7 +15,6 @@ import { CommonModule } from '@angular/common';
 export class CommentaryComponent implements OnInit {
 
   public raw_commentary = "";
-  public commentary = "";
   public prefix = "";
 
   constructor(private modelBackendService: ModelBackendService, private gameStateService: GameStateService) {
@@ -27,6 +26,7 @@ export class CommentaryComponent implements OnInit {
     this.modelBackendService.getPrefixObservable().subscribe({
       next: (prefix) => {
         this.prefix = prefix;
+        this.raw_commentary = "";
       }
     });
   }
@@ -35,7 +35,10 @@ export class CommentaryComponent implements OnInit {
     this.raw_commentary = "";
     this.modelBackendService.getAnnotation(this.gameStateService.get_chess_game_at_index(2)).subscribe((value) => {
       this.raw_commentary += value;
-      this.commentary = this.raw_commentary.replace("<n>", "\n");
     });
+  }
+
+  get commentary(): string {
+    return this.raw_commentary.replace("<n>", "\n");
   }
 }
