@@ -96,9 +96,6 @@ class ServeProxyUtilsFacadeSingleton(object):
                     "temperature": {
                         "type": "number"
                     },
-                    "do_sample": {
-                        "type": "boolean"
-                    },
                     "target_type": {
                         "type": "string"
                     },
@@ -227,6 +224,7 @@ class ServeProxyUtilsFacadeSingleton(object):
         target_type = None if 'target_type' not in data else data.get('target_type')
         prefix = '' if 'prefix' not in data else data.get('prefix')
         data['prefix'] = prefix
+        temperature = 1.0 if 'temperature' not in data else data.get('temperature')
 
         key = self.request_to_key(
             past_boards=past_boards,
@@ -243,7 +241,7 @@ class ServeProxyUtilsFacadeSingleton(object):
             self.__cache.set(key, logits)
         logits = self.__cache.get(key)
 
-        probabilities = torch.nn.functional.softmax(torch.tensor(logits), dim=-1)
+        probabilities = torch.nn.functional.softmax(torch.tensor(logits) / temperature, dim=-1)
         values, indices = torch.topk(probabilities, k=topk, dim=-1)
         values = values.tolist()
         indices = list(map(lambda i: self.__sp.IdToPiece(i), indices.tolist()))
