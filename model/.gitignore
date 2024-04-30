@@ -4,4 +4,5 @@
 !/artifacts/model.pt
 !/artifacts/commentary_types.parquet
 !/artifacts/sp2000.model
-!/artifacts/sp2000.vocab
+!/artifacts/sp2000.vocab*
+**/__pycache__/

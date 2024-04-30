@@ -1,0 +1,33 @@
+# Use two stages for a smaller image
+FROM node:alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy package.json and package-lock.json
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the application files
+COPY . .
+
+# Build the Angular application in production mode
+RUN npm run build --prod
+
+# Create a slimmer image for serving the application
+FROM nginx:alpine
+
+# Copy the Nginx configuration file (replace with your actual configuration)
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Copy the built Angular application from the builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Expose the port used by Nginx (typically 80)
+EXPOSE 80
+
+# Start the Nginx server
+CMD ["nginx", "-g", "daemon off;"]
+
