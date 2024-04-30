@@ -66,6 +66,10 @@ export class AppComponent implements OnInit {
 
   @HostListener('document:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent): void {
+    if (!(event.target instanceof HTMLElement)) return;
+    if(["INPUT", "TEXTAREA"].includes(event.target?.nodeName)) {
+      return ;
+    }
     this.keyCommandObservable.next(event.key);
   }
 }
