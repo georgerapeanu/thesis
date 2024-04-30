@@ -24,6 +24,18 @@ from serve_utils.Validators import JsonSchemaValidator, BoardsValidator, MaxNewT
 from ring.func.lru_cache import LruCache
 
 logger = logging.getLogger(__name__)
+file_handler = logging.FileHandler('artifacts/proxy.log')
+handler = logging.StreamHandler()
+file_handler.setFormatter(logging.Formatter(
+    '%(asctime)s %(levelname)s: %(message)s '
+    '[in %(pathname)s:%(lineno)d]'
+))
+handler.setFormatter(logging.Formatter(
+    '%(asctime)s %(levelname)s: %(message)s '
+    '[in %(pathname)s:%(lineno)d]'
+))
+logger.addHandler(handler)
+logger.addHandler(file_handler)
 logger.setLevel(logging.INFO)
 
 

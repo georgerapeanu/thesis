@@ -8,6 +8,18 @@ import logging
 app = Flask(__name__)
 app.config['CORS_HEADERS'] = 'Content-Type'
 logger = logging.getLogger(__name__)
+file_handler = logging.FileHandler('artifacts/model.log')
+handler = logging.StreamHandler()
+file_handler.setFormatter(logging.Formatter(
+    '%(asctime)s %(levelname)s: %(message)s '
+    '[in %(pathname)s:%(lineno)d]'
+))
+handler.setFormatter(logging.Formatter(
+    '%(asctime)s %(levelname)s: %(message)s '
+    '[in %(pathname)s:%(lineno)d]'
+))
+logger.addHandler(handler)
+logger.addHandler(file_handler)
 logger.setLevel(logging.INFO)
 
 
