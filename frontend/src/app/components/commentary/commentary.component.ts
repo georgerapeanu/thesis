@@ -16,6 +16,7 @@ export class CommentaryComponent implements OnInit {
 
   public raw_commentary = "";
   public prefix = "";
+  public is_placeholder = true;
 
   constructor(private modelBackendService: ModelBackendService, private gameStateService: GameStateService) {
     this.modelBackendService = modelBackendService;
@@ -27,14 +28,22 @@ export class CommentaryComponent implements OnInit {
       next: (prefix) => {
         this.prefix = prefix;
         this.raw_commentary = "";
+        this.is_placeholder = true;
       }
     });
   }
 
   request_commentary(): void {
     this.raw_commentary = "";
-    this.modelBackendService.getAnnotation(this.gameStateService.get_chess_game_at_index(2)).subscribe((value) => {
-      this.raw_commentary += value;
+    this.is_placeholder = true;
+    this.modelBackendService.getAnnotation(this.gameStateService.get_chess_game_at_index(2)).subscribe({
+      next: (value) => {
+        this.raw_commentary += value;
+        this.is_placeholder = false;
+      },
+      complete: () => {
+        this.is_placeholder = false;
+      }
     });
   }
 

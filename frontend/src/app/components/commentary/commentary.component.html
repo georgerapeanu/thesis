@@ -5,10 +5,10 @@
         <div class="inline text-gray-500">
           {{prefix}}
         </div>
-        <div *ngIf="commentary.length > 0" class="inline text-gray-900">
+        <div *ngIf="!is_placeholder" class="inline text-gray-900">
           {{commentary}}
         </div>
-        <div *ngIf="commentary.length === 0" class="inline text-gray-500">
+        <div *ngIf="is_placeholder" class="inline text-gray-500">
           ...
         </div>
       </div>
