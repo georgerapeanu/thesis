@@ -1,11 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { ModelBackendService } from '../../services/model-backend.service';
 import { CommonModule } from '@angular/common';
+import {MatButtonModule} from '@angular/material/button';
 
 @Component({
   selector: 'app-see-topk',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MatButtonModule],
   templateUrl: './see-topk.component.html',
   styleUrl: './see-topk.component.css'
 })
@@ -23,9 +24,13 @@ export class SeeTopkComponent implements OnInit {
     })
   }
 
+  isDisabled(prob_token: [number, string]): boolean {
+    return (prob_token[1] === '</s>');
+  }
+
   onClick(prob_token: [number, string]) {
-    if(prob_token[1] === '</s>') {
-      return;
+    if(this.isDisabled(prob_token)) {
+      return ;
     }
     let [_, token] = prob_token;
     let prefix = this.modelBackendService.prefix;

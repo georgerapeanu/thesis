@@ -1,11 +1,11 @@
-<div class="h-full text-gray-800 w-full text-base flex flex-col gap-1">
-  <div class="text-2xl font-semibold">
-    Next token
-  </div>
-  <div *ngFor="let prob_token of topk" class="w-full justify-between flex" (click)="onClick(prob_token)">
-    <div> {{prob_token[1]}} </div>
+<div class="text-2xl text-gray-800 w-full font-semibold">
+  Next token
+</div>
+<div class="h-[90%] text-gray-800 w-full text-base flex flex-col gap-1 overflow-scroll">
+  <div *ngFor="let prob_token of topk" class="w-full justify-between flex">
+    <button mat-stroked-button (click)="onClick(prob_token)" class="p-0" [disabled]="isDisabled(prob_token)"> {{prob_token[1]}} </button>
     <div class="w-4/5 flex flex-row-reverse gap-1">
-      <div class="bg-indigo-600 text-white" style="width: {{prob_token[0]}}%">  </div>
+      <div class="bg-indigo-600 text-white mr-2" style="width: {{prob_token[0]}}%">  </div>
       <div> {{prob_token[0]}}% </div>
     </div>
   </div>
