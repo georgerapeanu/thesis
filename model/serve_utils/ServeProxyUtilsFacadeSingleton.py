@@ -217,7 +217,7 @@ class ServeProxyUtilsFacadeSingleton(object):
                         token = token.strip()
                     data['prefix'] += token
                     yield token
-        logger.info(f"Cache hit/Cache miss/Total hits%: {count_cache_hit}/{count_cache_miss}/{count_cache_hit / (count_cache_hit + count_cache_miss)}")
+        logger.info(f"Cache hit/Cache miss/Total hits%: {count_cache_hit}/{count_cache_miss}/{100 * count_cache_hit / (count_cache_hit + count_cache_miss)}")
 
     def get_topk(self, request_data) -> List[Tuple[str, float]]:
         logger.info("received topk request_data: {}".format(request_data))
