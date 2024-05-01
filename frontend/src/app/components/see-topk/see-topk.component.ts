@@ -2,24 +2,34 @@ import { Component, OnInit } from '@angular/core';
 import { ModelBackendService } from '../../services/model-backend.service';
 import { CommonModule } from '@angular/common';
 import {MatButtonModule} from '@angular/material/button';
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'app-see-topk',
   standalone: true,
-  imports: [CommonModule, MatButtonModule],
+  imports: [CommonModule, MatButtonModule, MatProgressSpinnerModule],
   templateUrl: './see-topk.component.html',
   styleUrl: './see-topk.component.css'
 })
 export class SeeTopkComponent implements OnInit {
 
   public topk: Array<[number, string]> = [];
+  public loading = false;
 
   constructor(private modelBackendService: ModelBackendService) {
     this.modelBackendService = modelBackendService;
   }
 
   ngOnInit(): void {
+    this.modelBackendService.getTopKLoadingObservable().subscribe((loading) => {
+      this.loading = loading;
+      if(loading === true) {
+        this.topk = [];
+      }
+    });
+
     this.modelBackendService.getTopKObservable().subscribe((topk) => {
+      this.loading = false;
       this.topk = topk.map((value) => [Math.round(value[0] * 10000) / 100, value[1]]);
     })
   }
@@ -34,11 +44,12 @@ export class SeeTopkComponent implements OnInit {
     }
     let [_, token] = prob_token;
     let prefix = this.modelBackendService.prefix;
-    token = token.replace('▁', ' ');
+    token = token.replaceAll('▁', ' ');
     if(prefix.length === 0) {
       token = token.trimStart();
     }
     prefix += token;
     this.modelBackendService.prefix = prefix;
+    this.topk = [];
   }
 }

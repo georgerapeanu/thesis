@@ -83,6 +83,7 @@ export class ModelBackendService {
   private topk_settings_change = new Subject<null>();
   private decoder = new TextDecoder("utf-8");
   private topk_behavior_subject = new BehaviorSubject<Array<[number, string]>>([]);
+  private topk_loading_subject = new Subject<boolean>;
 
 
   constructor(
@@ -97,6 +98,7 @@ export class ModelBackendService {
     )
     .pipe(debounceTime(200))
     .subscribe((_) => {
+      this.topk_loading_subject.next(true);
       this.getTopK(this.gameStateService.get_chess_game_at_index(2))
       .subscribe((value) => {
         this.topk_behavior_subject.next(value);
@@ -166,5 +168,9 @@ export class ModelBackendService {
 
   getTopKObservable(): Observable<Array<[number, string]>> {
     return this.topk_behavior_subject.asObservable();
+  }
+
+  getTopKLoadingObservable(): Observable<boolean> {
+    return this.topk_loading_subject.asObservable();
   }
 }
