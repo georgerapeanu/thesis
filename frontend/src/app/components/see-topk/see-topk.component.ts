@@ -24,6 +24,9 @@ export class SeeTopkComponent implements OnInit {
   }
 
   onClick(prob_token: [number, string]) {
+    if(prob_token[1] === '</s>') {
+      return;
+    }
     let [_, token] = prob_token;
     let prefix = this.modelBackendService.prefix;
     token = token.replace('▁', ' ');
