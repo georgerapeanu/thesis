@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {MatSliderModule} from '@angular/material/slider';
 import {MatTooltipModule} from '@angular/material/tooltip';
@@ -6,6 +6,7 @@ import {MatSlideToggleModule} from '@angular/material/slide-toggle';
 import {MatRadioModule} from '@angular/material/radio';
 import { CommonModule } from '@angular/common';
 import { ModelBackendService } from '../../services/model-backend.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-model-settings',
@@ -14,7 +15,7 @@ import { ModelBackendService } from '../../services/model-backend.service';
   templateUrl: './model-settings.component.html',
   styleUrl: './model-settings.component.css'
 })
-export class ModelSettingsComponent implements OnInit {
+export class ModelSettingsComponent implements OnInit, OnDestroy {
   public temperature_min = 0.1;
   public temperature_max = 3;
   public temperature = 1.0;
@@ -25,9 +26,14 @@ export class ModelSettingsComponent implements OnInit {
   public max_new_tokens_step = 5;
   public max_new_tokens = 500;
   public prefix = "";
+  prefixSubscription: Subscription | null = null;
 
   constructor(private modelBackendService: ModelBackendService) {
     this.modelBackendService = modelBackendService;
+  }
+
+  ngOnDestroy(): void {
+    this.prefixSubscription?.unsubscribe();
   }
 
   ngOnInit(): void {
@@ -37,7 +43,7 @@ export class ModelSettingsComponent implements OnInit {
     this.max_new_tokens = this.modelBackendService.max_new_tokens;
     this.prefix = this.modelBackendService.prefix;
 
-    this.modelBackendService.getPrefixObservable().subscribe((value) => {
+    this.prefixSubscription = this.modelBackendService.getPrefixObservable().subscribe((value) => {
       this.prefix = value;
     });
   }

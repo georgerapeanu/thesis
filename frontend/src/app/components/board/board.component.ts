@@ -1,7 +1,8 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { GameStateService } from '../../services/game-state.service';
 import { CommonModule } from '@angular/common';
 import { Chess, Square, Move, KING, BLACK, PieceSymbol } from 'chess.js';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-board',
@@ -10,7 +11,7 @@ import { Chess, Square, Move, KING, BLACK, PieceSymbol } from 'chess.js';
   templateUrl: './board.component.html',
   styleUrl: './board.component.css'
 })
-export class BoardComponent implements OnInit {
+export class BoardComponent implements OnInit, OnDestroy {
   @Input() flipped: boolean = false;
   ranks: Array<string> = [];
   files: Array<string> = [];
@@ -21,6 +22,7 @@ export class BoardComponent implements OnInit {
   shownMoves: Array<string> = [];
   lastMove: Move | null = null;
   pendingPromotionMove: Move | null = null;
+  gameStateSubscription: Subscription | null = null;
 
   constructor(
     private gameStateService: GameStateService
@@ -29,10 +31,14 @@ export class BoardComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.gameStateService.get_observable_state().subscribe((_game_index: [Chess, number]): void => {
+    this.gameStateSubscription = this.gameStateService.get_observable_state().subscribe((_game_index: [Chess, number]): void => {
       let actual_game = this.gameStateService.get_chess_game_at_index(1);
       this.updateComponentState(actual_game, this.flipped, this.focusedSquare, this.pendingPromotionMove);
     });
+  }
+
+  ngOnDestroy(): void {
+    this.gameStateSubscription?.unsubscribe();
   }
 
   private updateComponentState(

@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { BoardComponent } from './components/board/board.component';
 import { ModelBackendService } from './services/model-backend.service';
@@ -6,7 +6,7 @@ import { GameStateService } from './services/game-state.service';
 import { HttpClientModule } from '@angular/common/http';
 import { GameStateComponent } from './components/game-state/game-state.component';
 import { HistoryComponent } from './components/history/history.component';
-import { Subject, auditTime, debounceTime } from 'rxjs';
+import { Subject, Subscription, auditTime, debounceTime } from 'rxjs';
 import { ModelSettingsComponent } from './components/model-settings/model-settings.component';
 import { MatGridListModule } from '@angular/material/grid-list';
 import { CommentaryComponent } from './components/commentary/commentary.component';
@@ -19,13 +19,14 @@ import { SeeTopkComponent } from './components/see-topk/see-topk.component';
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   title = 'frontend';
 
   modelBackendService: ModelBackendService;
   gameStateService: GameStateService;
   commentary: string = "";
   keyCommandObservable = new Subject<string>;
+  keyCommandSubscription: Subscription | null = null;
 
   constructor(
     modelBackendService: ModelBackendService,
@@ -35,17 +36,21 @@ export class AppComponent implements OnInit {
     this.gameStateService = gameStateService;
   }
 
+  ngOnDestroy(): void {
+    this.keyCommandSubscription?.unsubscribe();
+  }
+
   ngOnInit(): void {
-    this.keyCommandObservable
-      .pipe(auditTime(50))
-      .subscribe((key) => {
-        switch(key) {
-          case 'ArrowLeft': this.undo(); break;
-          case 'ArrowRight': this.redo(); break;
-          case 'ArrowUp': this.top(); break;
-          case 'ArrowDown': this.bottom(); break;
-        }
-      });
+    this.keyCommandSubscription = this.keyCommandObservable
+    .pipe(auditTime(50))
+    .subscribe((key) => {
+      switch(key) {
+        case 'ArrowLeft': this.undo(); break;
+        case 'ArrowRight': this.redo(); break;
+        case 'ArrowUp': this.top(); break;
+        case 'ArrowDown': this.bottom(); break;
+      }
+    });
   }
 
   public undo() {
