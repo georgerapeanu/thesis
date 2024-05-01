@@ -38,6 +38,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.keyCommandSubscription?.unsubscribe();
+    this.keyCommandObservable.complete();
   }
 
   ngOnInit(): void {

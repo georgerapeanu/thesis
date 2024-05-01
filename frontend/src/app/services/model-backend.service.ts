@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
-import { environment } from '../..//environments/environment';
+import { environment } from '../../environments/environment';
 import { GameStateService } from './game-state.service';
 import { Chess } from 'chess.js';
-import { Observable, map, switchMap, from, BehaviorSubject, ReadableStreamLike, Subject, merge, debounceTime} from 'rxjs';
+import { Observable, map, switchMap, from, BehaviorSubject, ReadableStreamLike, Subject, merge, debounceTime, retry } from 'rxjs';
 import { fromFetch } from "rxjs/fetch";
 
 interface AnnotateRequestDict {
@@ -34,7 +34,7 @@ export class ModelBackendService {
     return this._temperature;
   }
   public set temperature(value) {
-    if(value !== this._temperature) {
+    if (value !== this._temperature) {
       this.topk_settings_change.next(null);
     }
     this._temperature = value;
@@ -53,7 +53,7 @@ export class ModelBackendService {
     return this._commentary_type;
   }
   public set commentary_type(value) {
-    if(value !== this._commentary_type) {
+    if (value !== this._commentary_type) {
       this.topk_settings_change.next(null);
     }
     this._commentary_type = value;
@@ -72,7 +72,7 @@ export class ModelBackendService {
     return this._prefix.replace("<n>", "\n");
   }
   public set prefix(value) {
-    if(value !== this.prefix) {
+    if (value !== this.prefix) {
       this.topk_settings_change.next(null);
     }
     this._prefix = value.replace("\n", "<n>");
@@ -86,6 +86,7 @@ export class ModelBackendService {
   private topk_loading_subject = new Subject<boolean>;
 
 
+
   constructor(
     private gameStateService: GameStateService
   ) {
@@ -96,60 +97,62 @@ export class ModelBackendService {
       this.gameStateService.get_observable_state().pipe(map((_value) => null)),
       this.topk_settings_change.asObservable()
     )
-    .pipe(debounceTime(200))
-    .subscribe((_) => {
-      this.topk_loading_subject.next(true);
-      this.getTopK(this.gameStateService.get_chess_game_at_index(2))
-      .subscribe((value) => {
-        this.topk_behavior_subject.next(value);
-      });
-    })
+      .pipe(debounceTime(200))
+      .subscribe((_) => {
+        this.topk_loading_subject.next(true);
+        let topk_subscription = this.getTopK(this.gameStateService.get_chess_game_at_index(2))
+          .pipe(retry({ delay: 1000}))
+          .subscribe((value) => {
+            this.topk_behavior_subject.next(value);
+            topk_subscription.unsubscribe();
+          });
+      })
   }
 
   getAnnotation(chess: Chess): Observable<string> {
     var current_board = chess.fen();
-    var past_boards = chess.history({verbose: true}).slice(-2).map((move) => move.before);
-    var request_dict: AnnotateRequestDict  = {
+    var past_boards = chess.history({ verbose: true }).slice(-2).map((move) => move.before);
+    var request_dict: AnnotateRequestDict = {
       "past_boards": past_boards,
       "current_board": current_board,
       "do_sample": this._doSample,
       "max_new_tokens": this._max_new_tokens,
     };
-    if(this.doSample) {
+    if (this.doSample) {
       request_dict["temperature"] = this._temperature;
     }
-    if(this.commentary_type.length > 0) {
+    if (this.commentary_type.length > 0) {
       request_dict["target_type"] = this._commentary_type;
     }
-    if(this.prefix.length > 0) {
+    if (this.prefix.length > 0) {
       request_dict["prefix"] = this._prefix;
     }
     return fromFetch(environment.modelURL + "/get_commentary", {
       method: "POST",
       body: JSON.stringify(request_dict)
     })
-    .pipe(switchMap((result) => {
-      if(!result.body) {
-        throw "Error reading response";
-      }
-      return from(result.body! as ReadableStreamLike<Uint8Array>);
-    }))
-    .pipe(map(bytes => {
-      return this.decoder.decode(bytes);
-    }));
+      .pipe(switchMap((result) => {
+        if (!result.body) {
+          throw "Error reading response";
+        }
+        return from(result.body! as ReadableStreamLike<Uint8Array>);
+      }))
+      .pipe(map(bytes => {
+        return this.decoder.decode(bytes);
+      }));
   }
 
   getTopK(chess: Chess): Observable<Array<[number, string]>> {
     var current_board = chess.fen();
-    var past_boards = chess.history({verbose: true}).slice(-2).map((move) => move.before);
-    var request_dict: TopKRequestDict  = {
+    var past_boards = chess.history({ verbose: true }).slice(-2).map((move) => move.before);
+    var request_dict: TopKRequestDict = {
       "past_boards": past_boards,
       "current_board": current_board,
     };
-    if(this.commentary_type.length > 0) {
+    if (this.commentary_type.length > 0) {
       request_dict["target_type"] = this._commentary_type;
     }
-    if(this.prefix.length > 0) {
+    if (this.prefix.length > 0) {
       request_dict["prefix"] = this._prefix;
     }
     request_dict["temperature"] = this._temperature;
@@ -157,9 +160,9 @@ export class ModelBackendService {
       method: "POST",
       body: JSON.stringify(request_dict)
     })
-    .pipe(switchMap(response => {
-      return from(response.json());
-    }));
+      .pipe(switchMap(response => {
+        return from(response.json());
+      }));
   }
 
   getPrefixObservable(): Observable<string> {
