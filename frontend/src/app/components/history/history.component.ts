@@ -1,12 +1,14 @@
-import { AfterViewChecked, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewChecked, Component, ElementRef, EventEmitter, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
 import { GameStateService } from '../../services/game-state.service';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
+import {MatButtonModule} from '@angular/material/button';
+import {MatIconModule} from '@angular/material/icon';
 
 @Component({
   selector: 'app-history',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule],
   templateUrl: './history.component.html',
   styleUrl: './history.component.css'
 })
@@ -18,6 +20,8 @@ export class HistoryComponent implements OnInit, AfterViewChecked, OnDestroy {
   @ViewChild("toFocus")
   toFocus: ElementRef | undefined = undefined;
   gameStateSubscription: Subscription | null = null;
+
+  @Output() requestFlip = new EventEmitter<null>();
 
   constructor(
     private gameStateService: GameStateService
@@ -60,5 +64,9 @@ export class HistoryComponent implements OnInit, AfterViewChecked, OnDestroy {
       return;
     }
     this.gameStateService.seek(index + 1);
+  }
+
+  onRequestFlip() {
+    this.requestFlip.emit(null);
   }
 }

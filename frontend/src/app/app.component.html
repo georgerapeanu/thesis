@@ -4,10 +4,10 @@
       <app-model-settings class="h-full w-full py-2"></app-model-settings>
     </mat-grid-tile>
     <mat-grid-tile [colspan]="2" [rowspan]="5" >
-      <app-board class="w-full aspect-square py-2"> </app-board>
+      <app-board class="w-full aspect-square py-2" [flipped]="flipped"> </app-board>
     </mat-grid-tile>
     <mat-grid-tile [colspan]="1" [rowspan]="5">
-      <app-history class="h-full w-full py-2"> </app-history>
+      <app-history class="h-full w-full py-2" (requestFlip)="onRequestFlip()"> </app-history>
     </mat-grid-tile>
     <mat-grid-tile [colspan]="1" [rowspan]="2">
       <app-see-topk class="h-full w-full py-2"> </app-see-topk>

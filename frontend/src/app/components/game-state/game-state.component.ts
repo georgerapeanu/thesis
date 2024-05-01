@@ -4,7 +4,6 @@ import { Chess, validateFen } from 'chess.js';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
-
 @Component({
   selector: 'app-game-state',
   standalone: true,

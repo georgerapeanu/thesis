@@ -27,6 +27,7 @@ export class AppComponent implements OnInit, OnDestroy {
   commentary: string = "";
   keyCommandObservable = new Subject<string>;
   keyCommandSubscription: Subscription | null = null;
+  flipped: boolean = false;
 
   constructor(
     modelBackendService: ModelBackendService,
@@ -77,5 +78,10 @@ export class AppComponent implements OnInit, OnDestroy {
       return ;
     }
     this.keyCommandObservable.next(event.key);
+  }
+
+  public onRequestFlip() {
+    this.flipped = !this.flipped;
+    console.log("now ", this.flipped);
   }
 }

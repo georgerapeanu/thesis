@@ -1,4 +1,4 @@
-import { Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges } from '@angular/core';
 import { GameStateService } from '../../services/game-state.service';
 import { CommonModule } from '@angular/common';
 import { Chess, Square, Move, KING, BLACK, PieceSymbol } from 'chess.js';
@@ -11,7 +11,7 @@ import { Subscription } from 'rxjs';
   templateUrl: './board.component.html',
   styleUrl: './board.component.css'
 })
-export class BoardComponent implements OnInit, OnDestroy {
+export class BoardComponent implements OnInit, OnDestroy, OnChanges {
   @Input() flipped: boolean = false;
   ranks: Array<string> = [];
   files: Array<string> = [];
@@ -35,6 +35,16 @@ export class BoardComponent implements OnInit, OnDestroy {
       let actual_game = this.gameStateService.get_chess_game_at_index(1);
       this.updateComponentState(actual_game, this.flipped, this.focusedSquare, this.pendingPromotionMove);
     });
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    console.log(changes);
+    this.updateComponentState(
+      this.lastGame,
+      this.flipped,
+      this.focusedSquare,
+      this.pendingPromotionMove
+    );
   }
 
   ngOnDestroy(): void {
