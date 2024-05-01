@@ -6,7 +6,7 @@ import { GameStateService } from './services/game-state.service';
 import { HttpClientModule } from '@angular/common/http';
 import { GameStateComponent } from './components/game-state/game-state.component';
 import { HistoryComponent } from './components/history/history.component';
-import { Subject, debounceTime } from 'rxjs';
+import { Subject, auditTime, debounceTime } from 'rxjs';
 import { ModelSettingsComponent } from './components/model-settings/model-settings.component';
 import { MatGridListModule } from '@angular/material/grid-list';
 import { CommentaryComponent } from './components/commentary/commentary.component';
@@ -37,7 +37,7 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     this.keyCommandObservable
-      .pipe(debounceTime(50))
+      .pipe(auditTime(50))
       .subscribe((key) => {
         switch(key) {
           case 'ArrowLeft': this.undo(); break;

@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { AfterViewChecked, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { GameStateService } from '../../services/game-state.service';
 import { CommonModule } from '@angular/common';
 
@@ -9,11 +9,13 @@ import { CommonModule } from '@angular/common';
   templateUrl: './history.component.html',
   styleUrl: './history.component.css'
 })
-export class HistoryComponent implements OnInit {
+export class HistoryComponent implements OnInit, AfterViewChecked {
 
   moves_enumerated: Array<string> = [];
   moves_indexed: Array<number | null> = [];
   current_index: number = 0;
+  @ViewChild("toFocus")
+  toFocus: ElementRef | undefined = undefined;
 
   constructor(
     private gameStateService: GameStateService
@@ -39,6 +41,12 @@ export class HistoryComponent implements OnInit {
       });
 
     });
+  }
+
+  ngAfterViewChecked(): void {
+    if(this.toFocus) {
+      this.toFocus.nativeElement.parentElement.scrollIntoView({block: 'center', behavior: 'smooth'});
+    }
   }
 
   onClick(index: number | null) {

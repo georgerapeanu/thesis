@@ -2,9 +2,10 @@
   <div class="bg-gray-100 w-full text-2xl text-gray-900 py-2 pl-1">
     Mate in tmp
   </div>
-  <div class="w-full max-h-full grid grid-cols-7 bg-white overflow-scroll">
+  <div class="w-full max-h-[95%] grid grid-cols-7 bg-white overflow-scroll">
     <div *ngFor="let move of moves_enumerated; index as i" [class.text-center]="(i % 3 === 0)" [class.bg-gray-200]="(i % 3 === 0)" [class.text-gray-600]="(i % 3 === 0)" [class.col-span-3]="(i % 3 !== 0)" [class.bg-slate-300]="(moves_indexed[i] === current_index - 1)" (click)="onClick(moves_indexed[i])">
       {{ move }}
+      <div *ngIf="(moves_indexed[i] === current_index - 1 || (i === 0 && current_index === 0))" #toFocus></div>
     </div>
   </div>
 </div>
