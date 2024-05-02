@@ -82,6 +82,5 @@ export class AppComponent implements OnInit, OnDestroy {
 
   public onRequestFlip() {
     this.flipped = !this.flipped;
-    console.log("now ", this.flipped);
   }
 }

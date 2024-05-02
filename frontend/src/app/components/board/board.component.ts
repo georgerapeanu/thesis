@@ -32,13 +32,12 @@ export class BoardComponent implements OnInit, OnDestroy, OnChanges {
 
   ngOnInit() {
     this.gameStateSubscription = this.gameStateService.get_observable_state().subscribe((_game_index: [Chess, number]): void => {
-      let actual_game = this.gameStateService.get_chess_game_at_index(1);
+      let actual_game = this.gameStateService.get_chess_game_at_current_index(1);
       this.updateComponentState(actual_game, this.flipped, this.focusedSquare, this.pendingPromotionMove);
     });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    console.log(changes);
     this.updateComponentState(
       this.lastGame,
       this.flipped,

@@ -31,7 +31,7 @@ export class GameStateComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.gameStateSubscription = this.gameStateService.get_observable_state().subscribe((game_index: [Chess, number]): void => {
       this.pgn = game_index[0].pgn();
-      this.fen = this.gameStateService.get_chess_game_at_index(0).fen();
+      this.fen = this.gameStateService.get_chess_game_at_current_index(0).fen();
       this.fen_invalid = false;
       this.pgn_invalid = false;
     });
@@ -54,7 +54,7 @@ export class GameStateComponent implements OnInit, OnDestroy {
 
   onFocusOut(): void {
     this.pgn = this.gameStateService.get_current_state()[0].pgn();
-    this.fen = this.gameStateService.get_chess_game_at_index(0).fen();
+    this.fen = this.gameStateService.get_chess_game_at_current_index(0).fen();
     this.fen_invalid = false;
     this.pgn_invalid = false;
   }

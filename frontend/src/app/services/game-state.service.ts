@@ -69,7 +69,7 @@ export class GameStateService {
     return this.seek(this.move_index + 1);
   }
 
-  get_chess_game_at_index(min_history: number): Chess {
+  get_chess_game_at_current_index(min_history: number): Chess {
     if(this.move_index > 0) {
       if(this.move_index - 1 - min_history >= 0) {
         var chess_game_at_index= new Chess(this.current_game.history({verbose: true})[this.move_index - 1 - min_history].after);

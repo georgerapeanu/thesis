@@ -47,7 +47,7 @@ export class CommentaryComponent implements OnInit, OnDestroy {
     if(this.annotateSubscription) {
       this.annotateSubscription.unsubscribe();
     }
-    this.annotateSubscription = this.modelBackendService.getAnnotation(this.gameStateService.get_chess_game_at_index(2)).subscribe({
+    this.annotateSubscription = this.modelBackendService.getAnnotation(this.gameStateService.get_chess_game_at_current_index(2)).subscribe({
       next: (value) => {
         this.raw_commentary += value;
         this.is_placeholder = false;

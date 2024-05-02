@@ -4,6 +4,8 @@ import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import {MatButtonModule} from '@angular/material/button';
 import {MatIconModule} from '@angular/material/icon';
+import { ChessEngineService } from '../../services/chess-engine.service';
+import { EvaluationDTO } from '../../dto/evaluationDTO';
 
 @Component({
   selector: 'app-history',
@@ -20,13 +22,18 @@ export class HistoryComponent implements OnInit, AfterViewChecked, OnDestroy {
   @ViewChild("toFocus")
   toFocus: ElementRef | undefined = undefined;
   gameStateSubscription: Subscription | null = null;
+  evaluationSubscription: Subscription | null = null;
+  lastEvaluation: EvaluationDTO | null = null;
+  evaluationPending = false;
 
   @Output() requestFlip = new EventEmitter<null>();
 
   constructor(
-    private gameStateService: GameStateService
+    private gameStateService: GameStateService,
+    private chessEngineService: ChessEngineService
   ) {
     this.gameStateService = gameStateService;
+    this.chessEngineService = chessEngineService;
   }
 
   ngOnInit(): void {
@@ -46,11 +53,20 @@ export class HistoryComponent implements OnInit, AfterViewChecked, OnDestroy {
         this.moves_indexed.push(i);
       });
 
+      this.evaluationSubscription?.unsubscribe();
+      this.evaluationPending = true;
+      this.evaluationSubscription = this.chessEngineService.requestEvaluation(this.gameStateService.get_chess_game_at_current_index(0))
+      .subscribe((evaluation) => {
+        this.evaluationPending = false;
+        this.lastEvaluation = evaluation;
+      });
+
     });
   }
 
   ngOnDestroy(): void {
     this.gameStateSubscription?.unsubscribe();
+    this.evaluationSubscription?.unsubscribe();
   }
 
   ngAfterViewChecked(): void {

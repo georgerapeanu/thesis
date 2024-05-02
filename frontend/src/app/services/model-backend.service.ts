@@ -100,7 +100,7 @@ export class ModelBackendService {
       .pipe(debounceTime(200))
       .subscribe((_) => {
         this.topk_loading_subject.next(true);
-        let topk_subscription = this.getTopK(this.gameStateService.get_chess_game_at_index(2))
+        let topk_subscription = this.getTopK(this.gameStateService.get_chess_game_at_current_index(2))
           .pipe(retry({ delay: 1000}))
           .subscribe((value) => {
             this.topk_behavior_subject.next(value);
