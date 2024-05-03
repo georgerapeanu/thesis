@@ -2,7 +2,7 @@
   <div class="text-2xl font-semibold text-gray-800 mx-auto"> Model Settings </div>
   <div class="w-full">
     <div matTooltip="The type of commentary that the model should aim to generate"> Commentary type: </div>
-    <mat-radio-group aria-label="Select an option" [(ngModel)]="commentary_type" (ngModelChange)="updateSettings()">
+    <mat-radio-group color="primary" aria-label="Select an option" [(ngModel)]="commentary_type" (ngModelChange)="updateSettings()">
       <mat-radio-button value="MoveDesc">Move description</mat-radio-button>
       <mat-radio-button value="MoveQuality">Move quality</mat-radio-button>
       <mat-radio-button value="Comparative">Comparative</mat-radio-button>

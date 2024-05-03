@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BLACK, Chess } from 'chess.js';
-import { BehaviorSubject, Observable, Subject, Subscription, filter, map, merge, of, skipUntil, skipWhile, takeWhile } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, Subscription, filter, first, map, merge, of, skipUntil, skipWhile, takeWhile } from 'rxjs';
 import { EvaluationDTO } from '../dto/evaluationDTO';
 
 @Injectable({
@@ -51,14 +51,14 @@ export class ChessEngineService {
     .pipe(takeWhile((request_message) => request_message[0] === own_request_number))
     .pipe(map((request_message) => request_message[1].trim()))
 
-    let my_stop_subscription = my_messages_observable
+    my_messages_observable
     .pipe(filter((message) => message.startsWith('canStart')))
+    .pipe(first())
     .subscribe({
       next: (_value) => {
         this.engine_busy = true;
         this.stockfish?.postMessage(`position fen ${fen}`);
         this.stockfish?.postMessage('go depth 20');
-        my_stop_subscription.unsubscribe();
       }
     });
 

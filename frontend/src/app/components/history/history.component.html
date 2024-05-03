@@ -11,7 +11,7 @@
               <div class="flex items-center flex-row">
                 <div> Evaluation: </div>
                 <div *ngIf="lastEvaluation.isMate">
-                  <div> #{{lastEvaluation.score}} </div>
+                  <div> Mate in {{lastEvaluation.score}} </div>
                 </div>
                 <div *ngIf="!lastEvaluation.isMate">
                   <div> {{lastEvaluation.score}} </div>
@@ -38,7 +38,7 @@
       </div>
     </div>
   </div>
-  <div class="w-full max-h-[95%] grid grid-cols-7 bg-white overflow-scroll">
+  <div class="w-full max-h-[88%] grid grid-cols-7 bg-white overflow-scroll">
     <div *ngFor="let move of moves_enumerated; index as i" [class.text-center]="(i % 3 === 0)" [class.bg-gray-200]="(i % 3 === 0)" [class.text-gray-600]="(i % 3 === 0)" [class.col-span-3]="(i % 3 !== 0)" [class.bg-slate-300]="(moves_indexed[i] === current_index - 1)" (click)="onClick(moves_indexed[i])">
       {{ move }}
       <div *ngIf="(moves_indexed[i] === current_index - 1 || (i === 0 && current_index === 0))" #toFocus></div>

@@ -2,8 +2,9 @@ import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { GameStateService } from './game-state.service';
 import { Chess } from 'chess.js';
-import { Observable, map, switchMap, from, BehaviorSubject, ReadableStreamLike, Subject, merge, debounceTime, retry } from 'rxjs';
+import { Observable, map, switchMap, from, BehaviorSubject, ReadableStreamLike, Subject, merge, debounceTime, retry, Subscription } from 'rxjs';
 import { fromFetch } from "rxjs/fetch";
+import { TopKDTO } from '../dto/topkDTO';
 
 interface AnnotateRequestDict {
   past_boards: any;
@@ -22,6 +23,7 @@ interface TopKRequestDict {
   prefix?: string;
   temperature?: any;
 }
+
 
 
 @Injectable({
@@ -82,9 +84,8 @@ export class ModelBackendService {
   private prefix_behvaior_subject = new BehaviorSubject(this.prefix);
   private topk_settings_change = new Subject<null>();
   private decoder = new TextDecoder("utf-8");
-  private topk_behavior_subject = new BehaviorSubject<Array<[number, string]>>([]);
-  private topk_loading_subject = new Subject<boolean>;
-
+  private topk_behavior_subject = new BehaviorSubject<TopKDTO>(new TopKDTO([], TopKDTO.State.LOADING));
+  private last_topk_subscription: Subscription | null = null;
 
 
   constructor(
@@ -97,16 +98,10 @@ export class ModelBackendService {
       this.gameStateService.get_observable_state().pipe(map((_value) => null)),
       this.topk_settings_change.asObservable()
     )
-      .pipe(debounceTime(200))
-      .subscribe((_) => {
-        this.topk_loading_subject.next(true);
-        let topk_subscription = this.getTopK(this.gameStateService.get_chess_game_at_current_index(2))
-          .pipe(retry({ delay: 1000}))
-          .subscribe((value) => {
-            this.topk_behavior_subject.next(value);
-            topk_subscription.unsubscribe();
-          });
-      })
+    .pipe(debounceTime(200))
+    .subscribe((_) => {
+      this.manualRetryTopK();
+    })
   }
 
   getAnnotation(chess: Chess): Observable<string> {
@@ -169,11 +164,19 @@ export class ModelBackendService {
     return this.prefix_behvaior_subject.asObservable();
   }
 
-  getTopKObservable(): Observable<Array<[number, string]>> {
+  getTopKObservable(): Observable<TopKDTO> {
     return this.topk_behavior_subject.asObservable();
   }
 
-  getTopKLoadingObservable(): Observable<boolean> {
-    return this.topk_loading_subject.asObservable();
+  manualRetryTopK(): void {
+    this.last_topk_subscription?.unsubscribe();
+    this.topk_behavior_subject.next(new TopKDTO([], TopKDTO.State.LOADING));
+    this.last_topk_subscription = this.getTopK(this.gameStateService.get_chess_game_at_current_index(2))
+    .pipe(retry({ delay: 1000, count: 3}))
+    .pipe(map((data) => new TopKDTO(data, TopKDTO.State.LOADED)))
+    .subscribe({
+      next: (value) => this.topk_behavior_subject.next(value),
+      error: () => this.topk_behavior_subject.next(new TopKDTO([], TopKDTO.State.FAILED))
+    });
   }
 }
