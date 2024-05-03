@@ -17,7 +17,7 @@
     </div>
     <div class="w-full ">
       <div class="flex w-full justify-between">
-        <div matToolTip="On if the model should sample the next token, off otherwise">Sample: </div>
+        <div matTooltip="On if the model should sample the next token, off otherwise">Sample: </div>
         <mat-slide-toggle [(ngModel)]="modelSettings.do_sample" (ngModelChange)="updateSample()" color="primary"></mat-slide-toggle>
       </div>
     </div>

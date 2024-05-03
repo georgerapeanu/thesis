@@ -7,8 +7,8 @@
       <div class="flex flex-row justify-between">
         <div class="text-sm text-gray-600 my-auto">
           <div *ngIf="lastEvaluation" class="flex items-center gap-2">
-            <div class="flex flex-col">
-              <div class="flex items-center flex-row">
+            <div class="flex flex-col" matTooltip="Stockfish engine evaluation of the position at the specified depth. A positive number is advantage for white, negative is for black. Advantage is measured in centipawns, or in the number of moves until checkmate">
+              <div class="flex items-center flex-row" >
                 <div> Evaluation: </div>
                 <div *ngIf="lastEvaluation.isMate">
                   <div> Mate in {{lastEvaluation.score}} </div>
@@ -24,14 +24,17 @@
             Engine evaluation unavailable.
           </div>
         </div>
-        <div class="my-auto text-gray-600">
-          <button mat-button class="flex flex-col min-h-16 " (click)="onRequestFlip()">
-            <mat-icon class="rotate-90" fontIcon="flip" style="margin-right:0;"></mat-icon>
+        <div class="my-auto text-gray-600 flex">
+          <button class="flex flex-col items-center gap-2" matTooltip="The played moves of a chess game will go here. Navigating through them can be done by clicking on a certain move, or using the arrow keys.">
+            <mat-icon class="" fontIcon="help"></mat-icon>
+            <div class="w-full text-center text-xs text-gray-600">
+              Help
+            </div>
+          </button>
+          <button mat-button class="flex flex-col min-h-12 items-center gap-3 relative top-0.5" (click)="onRequestFlip()" matTooltip="Change the board's perspective from black to white or from white to black">
+            <mat-icon class="" fontIcon="flip" style="margin-right:0;transform: scale(1.5) rotate(90deg);"></mat-icon>
             <div class="w-full text-center text-xs text-gray-600">
               Flip
-            </div>
-            <div class="w-full text-center text-xs text-gray-600">
-              board
             </div>
           </button>
         </div>

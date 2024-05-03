@@ -6,11 +6,12 @@ import {MatButtonModule} from '@angular/material/button';
 import {MatIconModule} from '@angular/material/icon';
 import { ChessEngineService } from '../../services/chess-engine.service';
 import { EvaluationDTO } from '../../dto/evaluationDTO';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-history',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatTooltipModule],
   templateUrl: './history.component.html',
   styleUrl: './history.component.css'
 })
