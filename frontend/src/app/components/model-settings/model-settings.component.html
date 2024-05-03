@@ -1,6 +1,6 @@
 <div class="h-full w-full text-lg flex flex-col gap-4 my-1">
   <div class="text-2xl font-semibold text-gray-800 mx-auto"> Model Settings </div>
-  <div *ngIf="isLoaded() && modelSettings !== null">
+  <div *ngIf="isLoaded(state$ | async) && modelSettings !== null; else second">
     <div class="w-full">
       <div matTooltip="The type of commentary that the model should aim to generate"> Commentary type: </div>
       <mat-radio-group color="primary" aria-label="Select an option" [(ngModel)]="modelSettings.target_type" (ngModelChange)="updateCommentaryType()">
@@ -53,16 +53,20 @@
       <textarea style="resize: none" class="rounded-md h-[92%] pl-2 w-full bg-gray-200 text-small text-gray-900 min-h-32 pt-1" id="prefix" placeholder="Prompt prefix..." [(ngModel)]="modelSettings.prefix" (ngModelChange)="updatePrefix()" name="prefix"></textarea>
     </div>
   </div>
-  <div *ngIf="isLoading()" class="flex absolute top-0 bottom-0 left-0 right-0 items-center align-center justify-center z-10 opacity-60">
-    <mat-spinner color="primary"></mat-spinner>
-  </div>
-  <div *ngIf="isFailed()" class="text-red-700 flex flex-col items-center w-full h-full justify-center gap-2">
-    <div>
-      A network error has occured while initializing model settings
+  <ng-template #second>
+    <div *ngIf="isLoading(state$ | async); else third" class="flex absolute top-0 bottom-0 left-0 right-0 items-center align-center justify-center z-10 opacity-60">
+      <mat-spinner color="primary"></mat-spinner>
     </div>
-    <button mat-fab extended color="primary" (click)="onRetryModelSettings()">
-      <mat-icon>replay</mat-icon>
-      Retry
-    </button>
-  </div>
+    <ng-template #third>
+      <div *ngIf="isFailed(state$ | async)" class="text-red-700 flex flex-col items-center w-full h-full justify-center gap-2">
+        <div>
+          A network error has occured while initializing model settings.
+        </div>
+        <button mat-fab extended color="primary" (click)="onRetryModelSettings()">
+          <mat-icon>replay</mat-icon>
+          Retry
+        </button>
+      </div>
+    </ng-template>
+  </ng-template>
 </div>

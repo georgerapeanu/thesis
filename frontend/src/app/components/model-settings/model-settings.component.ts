@@ -6,7 +6,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatRadioModule } from '@angular/material/radio';
 import { CommonModule } from '@angular/common';
 import { ModelBackendService } from '../../services/model-backend.service';
-import { Subscription } from 'rxjs';
+import { Observable, Subscription, delay } from 'rxjs';
 import { ModelSettingsDTO } from '../../dto/modelSettingsDTO';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -24,10 +24,11 @@ export class ModelSettingsComponent implements OnInit, OnDestroy {
   modelSettings: ModelSettingsDTO | null = null;
   modelSettingsSubscription: Subscription | null = null;
   modelSettingsLoadedSubscription: Subscription | null = null;
-  state: ProgressEnum = ProgressEnum.LOADING;
+  state$: Observable<ProgressEnum>;
 
   constructor(private modelBackendService: ModelBackendService) {
     this.modelBackendService = modelBackendService;
+    this.state$ = this.modelBackendService.getModelSettingsProgressObservable();
   }
 
   ngOnDestroy(): void {
@@ -38,9 +39,6 @@ export class ModelSettingsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.modelSettingsSubscription = this.modelBackendService.getModelSettingsDistinctUntilChangedObservable().subscribe((settings: ModelSettingsDTO) => {
       this.modelSettings = settings.clone();
-    });
-    this.modelSettingsLoadedSubscription = this.modelBackendService.getModelSettingsProgressObservable().subscribe((state: ProgressEnum) => {
-      this.state = state;
     });
   }
 
@@ -88,15 +86,15 @@ export class ModelSettingsComponent implements OnInit, OnDestroy {
     this.modelBackendService.retryAll();
   }
 
-  isLoading(): boolean {
-    return this.state === ProgressEnum.LOADING;
+  isLoading(state: ProgressEnum | null): boolean {
+    return state === ProgressEnum.LOADING;
   }
 
-  isLoaded(): boolean {
-    return this.state === ProgressEnum.LOADED;
+  isLoaded(state: ProgressEnum | null): boolean {
+    return state === ProgressEnum.LOADED;
   }
 
-  isFailed(): boolean {
-    return this.state === ProgressEnum.FAILED;
+  isFailed(state: ProgressEnum | null): boolean {
+    return state === ProgressEnum.FAILED;
   }
 }

@@ -1,3 +1,3 @@
 export const environment = {
-  modelURL: 'http://localhost:8080'
+  modelURL: 'http://alocalhost:8080'
 };
