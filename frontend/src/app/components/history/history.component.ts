@@ -21,6 +21,7 @@ export class HistoryComponent implements OnInit, AfterViewChecked, OnDestroy {
   current_index: number = 0;
   @ViewChild("toFocus")
   toFocus: ElementRef | undefined = undefined;
+  forceRefocus: boolean = false;
   gameStateSubscription: Subscription | null = null;
   evaluationSubscription: Subscription | null = null;
   lastEvaluation: EvaluationDTO | null = null;
@@ -40,9 +41,12 @@ export class HistoryComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.gameStateSubscription = this.gameStateService.get_observable_state().subscribe(game_index => {
       this.moves_enumerated = [];
       this.moves_indexed = [];
-      this.current_index = 0;
-
       let [game, index] = game_index;
+
+      if(index !== this.current_index) {
+        this.forceRefocus = true;
+      }
+
       this.current_index = index;
        game.history().forEach((move, i) => {
         if(this.moves_indexed.length % 3 == 0) {
@@ -70,8 +74,9 @@ export class HistoryComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   ngAfterViewChecked(): void {
-    if(this.toFocus) {
+    if(this.toFocus && this.forceRefocus) {
       this.toFocus.nativeElement.parentElement.scrollIntoView({block: 'center', behavior: 'smooth'});
+      this.forceRefocus = false;
     }
   }
 
