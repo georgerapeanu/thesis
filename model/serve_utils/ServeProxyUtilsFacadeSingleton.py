@@ -62,6 +62,13 @@ class ServeProxyUtilsFacadeSingleton(object):
                 "Strategy": 3,
                 "Context": 4
             }
+            self.TARGET_TYPES_TO_NAMES = {
+                'MoveDesc': "Move description",
+                'MoveQuality': "Move Quality",
+                'Comparative': "Comparative",
+                "Strategy": "Strategy",
+                "Context": "Context" 
+            }
             validator = TargetTypeValidator(self.TARGET_TYPES_TO_IDS)
             validator = TemperatureValidator(validator)
             validator = BoardsValidator(self.__cfg, validator)
@@ -263,7 +270,7 @@ class ServeProxyUtilsFacadeSingleton(object):
     def get_info(self) -> Dict:
         return {
             'max_max_new_tokens': self.__cfg['max_new_tokens'],
-            'target_types': list(self.TARGET_TYPES_TO_IDS.keys()),
+            'target_types': list(self.TARGET_TYPES_TO_NAMES.items()),
             'count_past_boards': self.__cfg['count_past_boards']
         }
 

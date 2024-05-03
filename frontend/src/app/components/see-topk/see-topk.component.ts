@@ -6,6 +6,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Subscription } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { TopKDTO } from '../../dto/topkDTO';
+import { ProgressEnum } from '../../enums/ProgressEnum';
 
 
 @Component({
@@ -19,7 +20,7 @@ export class SeeTopkComponent implements OnInit, OnDestroy {
   public topk: Array<[number, string]> = [];
 
   topkSubscription: Subscription | null = null;
-  state = TopKDTO.State.LOADING;
+  state = ProgressEnum.LOADING;
 
   constructor(private modelBackendService: ModelBackendService) {
     this.modelBackendService = modelBackendService;
@@ -32,8 +33,8 @@ export class SeeTopkComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.topkSubscription = this.modelBackendService.getTopKObservable().subscribe({
       next: (topk_dto: TopKDTO) => {
-        this.state = topk_dto.state;
         this.topk = topk_dto.topk.map((value) => [Math.round(value[0] * 10000) / 100, value[1]]);
+        this.state = topk_dto.state;
       },
     });
   }
@@ -47,29 +48,29 @@ export class SeeTopkComponent implements OnInit, OnDestroy {
       return ;
     }
     let [_, token] = prob_token;
-    let prefix = this.modelBackendService.prefix;
+    let prefix = this.modelBackendService.get_prefix();
     token = token.replaceAll('▁', ' ');
     if(prefix.length === 0) {
       token = token.trimStart();
     }
     prefix += token;
-    this.modelBackendService.prefix = prefix;
+    this.modelBackendService.set_prefix(prefix);
     this.topk = [];
   }
 
   onRetryTopK() {
-    this.modelBackendService.manualRetryTopK();
+    this.modelBackendService.retryAll();
   }
 
   isLoading(): boolean {
-    return this.state === TopKDTO.State.LOADING;
+    return this.state === ProgressEnum.LOADING;
   }
 
   isLoaded(): boolean {
-    return this.state === TopKDTO.State.LOADED;
+    return this.state === ProgressEnum.LOADED;
   }
 
   isFailed(): boolean {
-    return this.state === TopKDTO.State.FAILED;
+    return this.state === ProgressEnum.FAILED;
   }
 }

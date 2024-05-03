@@ -1,19 +1,14 @@
-enum TopKStateEnum {
-  LOADED,
-  LOADING,
-  FAILED
-}
+import { ProgressEnum } from "../enums/ProgressEnum";
 
 export class TopKDTO {
-  static State = TopKStateEnum;
 
   topk: Array<[number, string]>;
-  state: TopKStateEnum;
+  state: ProgressEnum;
 
 
   constructor(
     topk: Array<[number, string]>,
-    state: TopKStateEnum
+    state: ProgressEnum
   ) {
     this.topk = topk;
     this.state = state;

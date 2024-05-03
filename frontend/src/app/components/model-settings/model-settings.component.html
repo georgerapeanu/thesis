@@ -1,51 +1,68 @@
 <div class="h-full w-full text-lg flex flex-col gap-4 my-1">
   <div class="text-2xl font-semibold text-gray-800 mx-auto"> Model Settings </div>
-  <div class="w-full">
-    <div matTooltip="The type of commentary that the model should aim to generate"> Commentary type: </div>
-    <mat-radio-group color="primary" aria-label="Select an option" [(ngModel)]="commentary_type" (ngModelChange)="updateCommentaryType()">
-      <mat-radio-button value="MoveDesc">Move description</mat-radio-button>
-      <mat-radio-button value="MoveQuality">Move quality</mat-radio-button>
-      <mat-radio-button value="Comparative">Comparative</mat-radio-button>
-      <mat-radio-button value="Strategy">Strategy</mat-radio-button>
-      <mat-radio-button value="Context">Context</mat-radio-button>
-      <mat-radio-button value="">General</mat-radio-button>
-    </mat-radio-group>
-  </div>
-  <div class="w-full ">
-    <div class="flex w-full justify-between">
-      <div matToolTip="On if the model should sample the next token, off otherwise">Sample: </div>
-      <mat-slide-toggle [(ngModel)]="sample" (ngModelChange)="updateSample()" color="primary"></mat-slide-toggle>
+  <div *ngIf="isLoaded() && modelSettings !== null">
+    <div class="w-full">
+      <div matTooltip="The type of commentary that the model should aim to generate"> Commentary type: </div>
+      <mat-radio-group color="primary" aria-label="Select an option" [(ngModel)]="modelSettings.target_type" (ngModelChange)="updateCommentaryType()">
+        <mat-radio-button *ngFor="let commentary_type of modelSettings.commentary_types" [value]="commentary_type[0]">{{commentary_type[1]}}</mat-radio-button>
+        <!--
+        <mat-radio-button value="MoveDesc">Move description</mat-radio-button>
+        <mat-radio-button value="MoveQuality">Move quality</mat-radio-button>
+        <mat-radio-button value="Comparative">Comparative</mat-radio-button>
+        <mat-radio-button value="Strategy">Strategy</mat-radio-button>
+        <mat-radio-button value="Context">Context</mat-radio-button>
+        -->
+        <mat-radio-button value="">General</mat-radio-button>
+      </mat-radio-group>
+    </div>
+    <div class="w-full ">
+      <div class="flex w-full justify-between">
+        <div matToolTip="On if the model should sample the next token, off otherwise">Sample: </div>
+        <mat-slide-toggle [(ngModel)]="modelSettings.do_sample" (ngModelChange)="updateSample()" color="primary"></mat-slide-toggle>
+      </div>
+    </div>
+    <div class="w-full">
+      <div class="flex w-full justify-between" >
+        <div *ngIf="modelSettings.do_sample" matTooltip="The temperature used by the model for sampling the next token.">Temperature: </div>
+        <div *ngIf="!modelSettings.do_sample" matTooltip="Only available with sample turned on">Temperature: </div>
+        <div class="font-bold"> {{modelSettings.temperature}} </div>
+      </div>
+      <div class="flex w-full">
+        <div class="flex justify-center items-center">{{modelSettings.min_temperature}}</div>
+        <mat-slider class="w-full" [min]="modelSettings.min_temperature" [max]="modelSettings.max_temperature" name="temperature"  step="0.1" discrete [displayWith]="formatLabel" color="primary" [disabled]="!modelSettings.do_sample">
+          <input matSliderThumb [(ngModel)]="modelSettings.temperature" (ngModelChange)="updateTemperature()">
+        </mat-slider>
+        <div class="flex justify-center items-center">{{modelSettings.max_temperature}}</div>
+      </div>
+    </div>
+    <div class="w-full">
+      <div class="flex w-full justify-between" >
+        <div matTooltip="The maximum number of new tokens that the model should generate.">Maximum new tokens: </div>
+        <div class="font-bold"> {{modelSettings.max_new_tokens}} </div>
+      </div>
+      <div class="flex w-full">
+        <div class="flex justify-center items-center">{{1}}</div>
+        <mat-slider class="w-full" [min]="1" [max]="modelSettings.max_max_new_tokens" name="max_new_tokens"  step="1" discrete [displayWith]="formatLabel" color="primary" >
+          <input matSliderThumb [(ngModel)]="modelSettings.max_new_tokens" (ngModelChange)="updateMaxNewTokens()">
+        </mat-slider>
+          <div class="flex justify-center items-center">{{modelSettings.max_max_new_tokens}}</div>
+      </div>
+    </div>
+    <div class="h-full w-full">
+      <div matTooltip="Specify a commentary prefix that you would like the model to autocomplete"> Prompt prefix: </div>
+      <textarea style="resize: none" class="rounded-md h-[92%] pl-2 w-full bg-gray-200 text-small text-gray-900 min-h-32 pt-1" id="prefix" placeholder="Prompt prefix..." [(ngModel)]="modelSettings.prefix" (ngModelChange)="updatePrefix()" name="prefix"></textarea>
     </div>
   </div>
-  <div class="w-full">
-    <div class="flex w-full justify-between" >
-      <div *ngIf="sample" matTooltip="The temperature used by the model for sampling the next token.">Temperature: </div>
-      <div *ngIf="!sample" matTooltip="Only available with sample turned on">Temperature: </div>
-      <div class="font-bold"> {{temperature}} </div>
-    </div>
-    <div class="flex w-full">
-      <div class="flex justify-center items-center">{{temperature_min}}</div>
-      <mat-slider class="w-full" [min]="temperature_min" [max]="temperature_max" name="temperature"  step="0.1" discrete [displayWith]="formatLabel" color="primary" [disabled]="!sample">
-        <input matSliderThumb [(ngModel)]="temperature" (ngModelChange)="updateTemperature()">
-      </mat-slider>
-      <div class="flex justify-center items-center">{{temperature_max}}</div>
-    </div>
+  <div *ngIf="isLoading()" class="flex absolute top-0 bottom-0 left-0 right-0 items-center align-center justify-center z-10 opacity-60">
+    <mat-spinner color="primary"></mat-spinner>
   </div>
-  <div class="w-full">
-    <div class="flex w-full justify-between" >
-      <div matTooltip="The maximum number of new tokens that the model should generate.">Maximum new tokens: </div>
-      <div class="font-bold"> {{max_new_tokens}} </div>
+  <div *ngIf="isFailed()" class="text-red-700 flex flex-col items-center w-full h-full justify-center gap-2">
+    <div>
+      A network error has occured while initializing model settings
     </div>
-    <div class="flex w-full">
-      <div class="flex justify-center items-center">{{max_new_tokens_min}}</div>
-      <mat-slider class="w-full" [min]="max_new_tokens_min" [max]="max_new_tokens_max" name="max_new_tokens"  step="max_new_tokens_step" discrete [displayWith]="formatLabel" color="primary" >
-        <input matSliderThumb [(ngModel)]="max_new_tokens" (ngModelChange)="updateMaxNewTokens()">
-      </mat-slider>
-      <div class="flex justify-center items-center">{{max_new_tokens_max}}</div>
-    </div>
-  </div>
-  <div class="h-full w-full">
-    <div matTooltip="Specify a commentary prefix that you would like the model to autocomplete"> Prompt prefix: </div>
-    <textarea style="resize: none" class="rounded-md h-[92%] pl-2 w-full bg-gray-200 text-small text-gray-900 min-h-32 pt-1" id="prefix" placeholder="Prompt prefix..." [(ngModel)]="prefix" (ngModelChange)="updatePrefix()" name="prefix"></textarea>
+    <button mat-fab extended color="primary" (click)="onRetryModelSettings()">
+      <mat-icon>replay</mat-icon>
+      Retry
+    </button>
   </div>
 </div>
