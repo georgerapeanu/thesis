@@ -4,7 +4,8 @@ import {MatButtonModule} from '@angular/material/button';
 import { ModelBackendService } from '../../services/model-backend.service';
 import { GameStateService } from '../../services/game-state.service';
 import { CommonModule } from '@angular/common';
-import { Subscription } from 'rxjs';
+import { Subscription, map } from 'rxjs';
+import { ModelSettingsDTO } from '../../dto/modelSettingsDTO';
 
 @Component({
   selector: 'app-commentary',
@@ -27,7 +28,9 @@ export class CommentaryComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.prefixSubscription = this.modelBackendService.getPrefixObservable().subscribe({
+    this.prefixSubscription = this.modelBackendService.getModelSettingsDistinctUntilChangedObservable()
+    .pipe(map((settings: ModelSettingsDTO) => settings.prefix))
+    .subscribe({
       next: (prefix) => {
         this.prefix = prefix;
         this.raw_commentary = "";
@@ -59,6 +62,6 @@ export class CommentaryComponent implements OnInit, OnDestroy {
   }
 
   get commentary(): string {
-    return this.raw_commentary.replace("<n>", "\n");
+    return this.raw_commentary.replaceAll("<n>", "\n");
   }
 }

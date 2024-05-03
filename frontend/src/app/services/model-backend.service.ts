@@ -2,14 +2,15 @@ import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { GameStateService } from './game-state.service';
 import { Chess } from 'chess.js';
-import { Observable, map, switchMap, from, BehaviorSubject, ReadableStreamLike, Subject, merge, debounceTime, retry, Subscription } from 'rxjs';
+import { Observable, map, switchMap, from, BehaviorSubject, ReadableStreamLike, Subject, merge, debounceTime, retry, Subscription, distinctUntilChanged } from 'rxjs';
 import { fromFetch } from "rxjs/fetch";
 import { TopKDTO } from '../dto/topkDTO';
+import { ModelSettingsDTO } from '../dto/modelSettingsDTO';
 
 interface AnnotateRequestDict {
-  past_boards: any;
-  current_board: any;
-  temperature?: any;
+  past_boards: Array<string>;
+  current_board: string;
+  temperature?: number;
   do_sample: boolean;
   target_type?: string;
   max_new_tokens: number;
@@ -17,11 +18,11 @@ interface AnnotateRequestDict {
 }
 
 interface TopKRequestDict {
-  past_boards: any;
-  current_board: any;
+  past_boards: Array<string>;
+  current_board: string;
   target_type?: string;
   prefix?: string;
-  temperature?: any;
+  temperature?: number;
 }
 
 
@@ -31,72 +32,38 @@ interface TopKRequestDict {
 })
 export class ModelBackendService {
 
-  private _temperature = 1;
-  public get temperature() {
-    return this._temperature;
-  }
-  public set temperature(value) {
-    if (value !== this._temperature) {
-      this.topk_settings_change.next(null);
-    }
-    this._temperature = value;
-  }
 
-  private _doSample = true;
-  public get doSample() {
-    return this._doSample;
-  }
-  public set doSample(value) {
-    this._doSample = value;
-  }
-
-  private _commentary_type = "";
-  public get commentary_type() {
-    return this._commentary_type;
-  }
-  public set commentary_type(value) {
-    if (value !== this._commentary_type) {
-      this.topk_settings_change.next(null);
-    }
-    this._commentary_type = value;
-  }
-
-  private _max_new_tokens = 1000;
-  public get max_new_tokens() {
-    return this._max_new_tokens;
-  }
-  public set max_new_tokens(value) {
-    this._max_new_tokens = value;
-  }
-
-  private _prefix = "";
-  public get prefix() {
-    return this._prefix.replace("<n>", "\n");
-  }
-  public set prefix(value) {
-    if (value !== this.prefix) {
-      this.topk_settings_change.next(null);
-    }
-    this._prefix = value.replace("\n", "<n>");
-    this.prefix_behvaior_subject.next(this.prefix);
-  }
-
-  private prefix_behvaior_subject = new BehaviorSubject(this.prefix);
-  private topk_settings_change = new Subject<null>();
+  private model_settings: ModelSettingsDTO = new ModelSettingsDTO({temperature: 1, do_sample: true, target_type: "", max_new_tokens: 1000, prefix: ""});
   private decoder = new TextDecoder("utf-8");
   private topk_behavior_subject = new BehaviorSubject<TopKDTO>(new TopKDTO([], TopKDTO.State.LOADING));
   private last_topk_subscription: Subscription | null = null;
 
+  private model_settings_subject = new Subject<ModelSettingsDTO>();
+  private distinct_until_changed_model_settings_observable: Observable<ModelSettingsDTO>;
 
   constructor(
     private gameStateService: GameStateService
   ) {
 
     this.gameStateService = gameStateService;
+    this.distinct_until_changed_model_settings_observable = this.model_settings_subject
+    .pipe(
+      distinctUntilChanged((prev, curr) => JSON.stringify(prev) === JSON.stringify(curr))
+    );
 
     merge(
       this.gameStateService.get_observable_state().pipe(map((_value) => null)),
-      this.topk_settings_change.asObservable()
+      this.distinct_until_changed_model_settings_observable
+      .pipe(
+        distinctUntilChanged((prev, curr) => {
+          return (
+            prev.temperature === curr.temperature &&
+            prev.target_type === curr.target_type &&
+            prev.prefix === curr.prefix
+          );
+        }),
+        map((_value) => null)
+      )
     )
     .pipe(debounceTime(200))
     .subscribe((_) => {
@@ -104,23 +71,64 @@ export class ModelBackendService {
     })
   }
 
+  public get temperature() {
+    return this.model_settings.temperature;
+  }
+  public set temperature(value) {
+    this.model_settings.temperature = value;
+    this.model_settings_subject.next(this.model_settings.clone());
+  }
+
+  public get doSample() {
+    return this.model_settings.do_sample;
+  }
+  public set doSample(value) {
+    this.model_settings.do_sample = value;
+    this.model_settings_subject.next(this.model_settings.clone());
+  }
+
+  public get commentary_type() {
+    return this.model_settings.target_type;
+  }
+  public set commentary_type(value) {
+    this.model_settings.target_type = value;
+    this.model_settings_subject.next(this.model_settings.clone());
+  }
+
+  public get max_new_tokens() {
+    return this.model_settings.max_new_tokens;
+  }
+  public set max_new_tokens(value) {
+    this.model_settings.max_new_tokens = value;
+    this.model_settings_subject.next(this.model_settings.clone());
+  }
+
+  public get prefix() {
+    return this.model_settings.prefix;
+  }
+  public set prefix(value) {
+    this.model_settings.prefix = value;
+    this.model_settings_subject.next(this.model_settings.clone());
+  }
+
+
   getAnnotation(chess: Chess): Observable<string> {
     var current_board = chess.fen();
     var past_boards = chess.history({ verbose: true }).slice(-2).map((move) => move.before);
     var request_dict: AnnotateRequestDict = {
       "past_boards": past_boards,
       "current_board": current_board,
-      "do_sample": this._doSample,
-      "max_new_tokens": this._max_new_tokens,
+      "do_sample": this.model_settings.do_sample,
+      "max_new_tokens": this.model_settings.max_new_tokens,
     };
     if (this.doSample) {
-      request_dict["temperature"] = this._temperature;
+      request_dict["temperature"] = this.model_settings.temperature;
     }
     if (this.commentary_type.length > 0) {
-      request_dict["target_type"] = this._commentary_type;
+      request_dict["target_type"] = this.model_settings.target_type;
     }
     if (this.prefix.length > 0) {
-      request_dict["prefix"] = this._prefix;
+      request_dict["prefix"] = this.model_settings.prefix.replaceAll("\n", "<n>");
     }
     return fromFetch(environment.modelURL + "/get_commentary", {
       method: "POST",
@@ -145,12 +153,12 @@ export class ModelBackendService {
       "current_board": current_board,
     };
     if (this.commentary_type.length > 0) {
-      request_dict["target_type"] = this._commentary_type;
+      request_dict["target_type"] = this.model_settings.target_type;
     }
     if (this.prefix.length > 0) {
-      request_dict["prefix"] = this._prefix;
+      request_dict["prefix"] = this.model_settings.prefix.replaceAll("\n", "<n>");
     }
-    request_dict["temperature"] = this._temperature;
+    request_dict["temperature"] = this.model_settings.temperature;
     return fromFetch(environment.modelURL + "/topk", {
       method: "POST",
       body: JSON.stringify(request_dict)
@@ -160,8 +168,8 @@ export class ModelBackendService {
       }));
   }
 
-  getPrefixObservable(): Observable<string> {
-    return this.prefix_behvaior_subject.asObservable();
+  getModelSettingsDistinctUntilChangedObservable(): Observable<ModelSettingsDTO> {
+    return this.distinct_until_changed_model_settings_observable;
   }
 
   getTopKObservable(): Observable<TopKDTO> {

@@ -7,6 +7,7 @@ import {MatRadioModule} from '@angular/material/radio';
 import { CommonModule } from '@angular/common';
 import { ModelBackendService } from '../../services/model-backend.service';
 import { Subscription } from 'rxjs';
+import { ModelSettingsDTO } from '../../dto/modelSettingsDTO';
 
 @Component({
   selector: 'app-model-settings',
@@ -26,14 +27,14 @@ export class ModelSettingsComponent implements OnInit, OnDestroy {
   public max_new_tokens_step = 5;
   public max_new_tokens = 500;
   public prefix = "";
-  prefixSubscription: Subscription | null = null;
+  modelSettingsSubscription: Subscription | null = null;
 
   constructor(private modelBackendService: ModelBackendService) {
     this.modelBackendService = modelBackendService;
   }
 
   ngOnDestroy(): void {
-    this.prefixSubscription?.unsubscribe();
+    this.modelSettingsSubscription?.unsubscribe();
   }
 
   ngOnInit(): void {
@@ -43,8 +44,12 @@ export class ModelSettingsComponent implements OnInit, OnDestroy {
     this.max_new_tokens = this.modelBackendService.max_new_tokens;
     this.prefix = this.modelBackendService.prefix;
 
-    this.prefixSubscription = this.modelBackendService.getPrefixObservable().subscribe((value) => {
-      this.prefix = value;
+    this.modelSettingsSubscription = this.modelBackendService.getModelSettingsDistinctUntilChangedObservable().subscribe((settings: ModelSettingsDTO) => {
+      this.temperature = settings.temperature;
+      this.sample = settings.do_sample;
+      this.commentary_type = settings.target_type;
+      this.max_new_tokens = settings.max_new_tokens;
+      this.prefix = settings.prefix;
     });
   }
 
@@ -52,11 +57,23 @@ export class ModelSettingsComponent implements OnInit, OnDestroy {
     return `${value}`;
   }
 
-  updateSettings() {
+  updateCommentaryType() {
     this.modelBackendService.commentary_type = this.commentary_type;
+  }
+
+  updateSample() {
     this.modelBackendService.doSample = this.sample;
+  }
+
+  updateTemperature() {
     this.modelBackendService.temperature = this.temperature;
+  }
+
+  updateMaxNewTokens() {
     this.modelBackendService.max_new_tokens = this.max_new_tokens;
+  }
+
+  updatePrefix() {
     this.modelBackendService.prefix = this.prefix;
   }
 }
