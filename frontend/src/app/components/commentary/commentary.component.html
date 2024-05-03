@@ -11,6 +11,9 @@
         <div *ngIf="is_placeholder" class="inline text-gray-500">
           ...
         </div>
+        <div *ngIf="error !== null" class="text-red-700 inline">
+          {{error}}
+        </div>
       </div>
     </mat-grid-tile>
     <mat-grid-tile [colspan]="1" [rowspan]="1" >

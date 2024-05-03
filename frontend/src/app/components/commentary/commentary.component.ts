@@ -18,6 +18,7 @@ export class CommentaryComponent implements OnInit, OnDestroy {
 
   public raw_commentary = "";
   public prefix = "";
+  public error: String | null = null;
   public is_placeholder = true;
   prefixSubscription: Subscription | null = null;
   annotateSubscription: Subscription | null = null;
@@ -52,10 +53,16 @@ export class CommentaryComponent implements OnInit, OnDestroy {
     }
     this.annotateSubscription = this.modelBackendService.getAnnotation(this.gameStateService.get_chess_game_at_current_index(2)).subscribe({
       next: (value) => {
+        this.error = null;
         this.raw_commentary += value;
         this.is_placeholder = false;
       },
+      error: (_) => {
+        this.error = "The request has failed.";
+        this.is_placeholder = false;
+      },
       complete: () => {
+        this.error = null;
         this.is_placeholder = false;
       }
     });
