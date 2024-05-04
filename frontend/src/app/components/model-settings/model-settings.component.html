@@ -1,6 +1,6 @@
 <div class="h-full w-full text-lg flex flex-col gap-4 my-1">
   <div class="text-2xl font-semibold text-gray-800 mx-auto"> Model Settings </div>
-  <div *ngIf="isLoaded(state$ | async) && modelSettings !== null; else second">
+  <div *ngIf="isLoaded(state$ | async) && modelSettings !== null; else second" class="h-full w-full flex flex-col">
     <div class="w-full">
       <div matTooltip="The type of commentary that the model should aim to generate"> Commentary type: </div>
       <mat-radio-group color="primary" aria-label="Select an option" [(ngModel)]="modelSettings.target_type" (ngModelChange)="updateCommentaryType()">
@@ -48,9 +48,9 @@
           <div class="flex justify-center items-center">{{modelSettings.max_max_new_tokens}}</div>
       </div>
     </div>
-    <div class="h-full w-full">
+    <div class="h-full box-border w-full flex flex-col">
       <div matTooltip="Specify a commentary prefix that you would like the model to autocomplete"> Prompt prefix: </div>
-      <textarea style="resize: none" class="rounded-md h-[92%] pl-2 w-full bg-gray-200 text-small text-gray-900 min-h-32 pt-1" id="prefix" placeholder="Prompt prefix..." [(ngModel)]="modelSettings.prefix" (ngModelChange)="updatePrefix()" name="prefix"></textarea>
+      <textarea style="resize: none" class="rounded-md h-full pl-2 w-full bg-gray-200 text-small text-gray-900 min-h-32 pt-1" id="prefix" placeholder="Prompt prefix..." [(ngModel)]="modelSettings.prefix" (ngModelChange)="updatePrefix()" name="prefix"></textarea>
     </div>
   </div>
   <ng-template #second>

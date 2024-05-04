@@ -1,5 +1,5 @@
-<div class="w-full h-full rounded border-2 border-gray-300 bg-white">
-  <div class="bg-gray-100 w-full flex justify-between p-2">
+<div class="w-full h-full rounded border-2 border-gray-300 bg-white flex flex-col">
+  <div class="bg-gray-100 w-full flex justify-between p-2 sticky top-0">
     <div class="w-full text-2xl font-semibold text-gray-800 ml-2 my-auto flex flex-col justify-between">
       <div class="my-auto text-center">
         History
@@ -41,7 +41,7 @@
       </div>
     </div>
   </div>
-  <div class="w-full max-h-[88%] grid grid-cols-7 bg-white overflow-scroll">
+  <div class="w-full grid grid-cols-7 bg-white overflow-scroll">
     <div *ngFor="let move of moves_enumerated; index as i" [class.text-center]="(i % 3 === 0)" [class.bg-gray-200]="(i % 3 === 0)" [class.text-gray-600]="(i % 3 === 0)" [class.col-span-3]="(i % 3 !== 0)" [class.bg-slate-300]="(moves_indexed[i] === current_index - 1)" (click)="onClick(moves_indexed[i])">
       {{ move }}
       <div *ngIf="(moves_indexed[i] === current_index - 1 || (i === 0 && current_index === 0))" #toFocus></div>

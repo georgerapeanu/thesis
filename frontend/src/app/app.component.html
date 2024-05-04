@@ -1,22 +1,22 @@
-<div class="h-screen bg-gray-100 m-auto overflow-hidden">
-  <mat-grid-list cols="4" rowHeight="fit" class="h-full m-auto w-5/6" gutterSize="20px" >
-    <mat-grid-tile [colspan]="1" [rowspan]="5">
+<div class="h-full w-full">
+  <div class="flex flex-row flex-wrap justify-between mx-10 gap-4 pt-2 h-[100vh]">
+    <div class="max-h-[75%] xl:w-1/4 xl:order-1 lg:w-1/4 lg:order-3 md:w-full md:order-1 sm:w-full sm:order-1 w-full order-1">
       <app-model-settings class="h-full w-full py-2"></app-model-settings>
-    </mat-grid-tile>
-    <mat-grid-tile [colspan]="2" [rowspan]="5" >
-      <app-board class="w-full aspect-square py-2" [flipped]="flipped"> </app-board>
-    </mat-grid-tile>
-    <mat-grid-tile [colspan]="1" [rowspan]="5">
-      <app-history class="h-full w-full py-2" (requestFlip)="onRequestFlip()"> </app-history>
-    </mat-grid-tile>
-    <mat-grid-tile [colspan]="1" [rowspan]="2">
+    </div>
+    <div class="aspect-square block xl:w-2/5 xl:order-2 lg:order-2 lg:w-2/3 md:w-full md:order-2 sm:w-full sm:order-2 w-full order-2">
+      <app-board class="py-2" [flipped]="flipped"> </app-board>
+    </div>
+    <div class="max-h-[75%] xl:w-1/4 xl:order-3 lg:w-1/4 lg:order-1 md:w-full md:order-3 sm:w-full sm:order-3 w-full order-3 block relative">
+      <app-history class="flex h-full py-2" (requestFlip)="onRequestFlip()"> </app-history>
+    </div>
+    <div class="max-h-[25%] xl:w-1/4 xl:order-4 lg:w-2/3 lg:order-4 md:w-full md:order-5 sm:w-full sm:order-5 w-full order-5">
       <app-see-topk class="h-full w-full py-2"> </app-see-topk>
-    </mat-grid-tile>
-    <mat-grid-tile [colspan]="2" [rowspan]="2">
+    </div>
+    <div class="max-h-[25%] xl:w-2/5 xl:order-5 lg:w-2/3 lg:order-6 md:w-full md:order-4 sm:w-full sm:order-4 w-full order-4">
       <app-commentary class="h-full w-full py-2"> </app-commentary>
-    </mat-grid-tile>
-    <mat-grid-tile [colspan]="1" [rowspan]="2">
+    </div>
+    <div class="max-h-[25%] xl:w-1/4 xl:order-6 lg:w-1/4 lg:order-5 md:w-full md:order-6 sm:w-full sm:order-6 w-full order-6">
       <app-game-state class="h-full w-full py-2"> </app-game-state>
-    </mat-grid-tile>
-  </mat-grid-list>
+    </div>
+  </div>
 </div>

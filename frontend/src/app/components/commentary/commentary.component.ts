@@ -1,6 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { MatGridListModule } from '@angular/material/grid-list';
-import {MatButtonModule} from '@angular/material/button';
+import { MatButtonModule } from '@angular/material/button';
 import { ModelBackendService } from '../../services/model-backend.service';
 import { GameStateService } from '../../services/game-state.service';
 import { CommonModule } from '@angular/common';
@@ -10,7 +9,7 @@ import { ModelSettingsDTO } from '../../dto/modelSettingsDTO';
 @Component({
   selector: 'app-commentary',
   standalone: true,
-  imports: [CommonModule, MatGridListModule, MatButtonModule],
+  imports: [CommonModule, MatButtonModule],
   templateUrl: './commentary.component.html',
   styleUrl: './commentary.component.css'
 })

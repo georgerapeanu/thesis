@@ -1,24 +1,19 @@
-<div class="text-lg w-full h-full ">
-  <mat-grid-list rows="6" cols="1" rowHeight="fit" class="h-full m-auto w-full" gutterSize="20px" >
-    <mat-grid-tile [colspan]="1" [rowspan]="5">
-      <div class="h-full w-full bg-gray-200 text-small pt-1 pl-2" readonly>
-        <div class="inline text-gray-500">
-          {{prefix}}
-        </div>
-        <div *ngIf="!is_placeholder" class="inline text-gray-900">
-          {{commentary}}
-        </div>
-        <div *ngIf="is_placeholder" class="inline text-gray-500">
-          ...
-        </div>
-        <div *ngIf="error !== null" class="text-red-700 inline">
-          {{error}}
-        </div>
+<div class="text-lg w-full h-full flex flex-col items-center justify-center gap-4">
+    <div class="h-[90%] w-full bg-gray-200 text-small pt-1 pl-2 overflow-scroll" readonly>
+      <div class="inline text-gray-500">
+        {{prefix}}
       </div>
-    </mat-grid-tile>
-    <mat-grid-tile [colspan]="1" [rowspan]="1" >
-      <button mat-stroked-button color="primary" (click)="request_commentary()"> Request commentary </button>
-    </mat-grid-tile>
-  </mat-grid-list>
-
+      <div *ngIf="!is_placeholder" class="inline text-gray-900">
+        {{commentary}}
+      </div>
+      <div *ngIf="is_placeholder" class="inline text-gray-500">
+        ...
+      </div>
+      <div *ngIf="error !== null" class="text-red-700 inline">
+        {{error}}
+      </div>
+    </div>
+    <div class="w-1/4 flex items-center justify-center">
+      <button class="" mat-stroked-button color="primary" (click)="request_commentary()"> Request commentary </button>
+    </div>
 </div>
