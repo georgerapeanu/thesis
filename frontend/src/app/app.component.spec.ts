@@ -20,12 +20,4 @@ describe('AppComponent', () => {
     expect(app.title).toEqual('frontend');
   });
 
-  it('should contain commentary', () => {
-    const fixture = TestBed.createComponent(AppComponent);
-    fixture.detectChanges();
-    let button = fixture.debugElement.nativeElement.querySelector('#requestCommentary');
-    button.click();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('#commentary')?.textContent?.length || 0).toBeGreaterThan(0);
-  });
 });

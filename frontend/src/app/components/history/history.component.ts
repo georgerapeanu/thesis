@@ -1,7 +1,7 @@
-import { AfterViewChecked, Component, ElementRef, EventEmitter, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
+import { AfterViewChecked, Component, ElementRef, EventEmitter, HostListener, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
 import { GameStateService } from '../../services/game-state.service';
 import { CommonModule } from '@angular/common';
-import { Subscription } from 'rxjs';
+import { Subject, Subscription, auditTime } from 'rxjs';
 import {MatButtonModule} from '@angular/material/button';
 import {MatIconModule} from '@angular/material/icon';
 import { ChessEngineService } from '../../services/chess-engine.service';
@@ -27,6 +27,8 @@ export class HistoryComponent implements OnInit, AfterViewChecked, OnDestroy {
   evaluationSubscription: Subscription | null = null;
   lastEvaluation: EvaluationDTO | null = null;
   evaluationPending = false;
+  keyCommandObservable = new Subject<string>;
+  keyCommandSubscription: Subscription | null = null;
 
   @Output() requestFlip = new EventEmitter<null>();
 
@@ -67,11 +69,24 @@ export class HistoryComponent implements OnInit, AfterViewChecked, OnDestroy {
       });
 
     });
+
+    this.keyCommandSubscription = this.keyCommandObservable
+    .pipe(auditTime(50))
+    .subscribe((key) => {
+      switch(key) {
+        case 'ArrowLeft': this.undo(); break;
+        case 'ArrowRight': this.redo(); break;
+        case 'ArrowUp': this.top(); break;
+        case 'ArrowDown': this.bottom(); break;
+      }
+    });
   }
 
   ngOnDestroy(): void {
     this.gameStateSubscription?.unsubscribe();
     this.evaluationSubscription?.unsubscribe();
+    this.keyCommandSubscription?.unsubscribe();
+    this.keyCommandObservable.complete();
   }
 
   ngAfterViewChecked(): void {
@@ -91,4 +106,31 @@ export class HistoryComponent implements OnInit, AfterViewChecked, OnDestroy {
   onRequestFlip() {
     this.requestFlip.emit(null);
   }
+
+  @HostListener('document:keydown', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent): void {
+    console.log("here");
+    if (!(event.target instanceof HTMLElement)) return;
+    if(["INPUT", "TEXTAREA"].includes(event.target?.nodeName)) {
+      return ;
+    }
+    this.keyCommandObservable.next(event.key);
+  }
+
+  public undo() {
+    this.gameStateService.undo();
+  }
+
+  public redo() {
+    this.gameStateService.redo();
+  }
+
+  public top() {
+    this.gameStateService.seek(0);
+  }
+
+  public bottom() {
+    this.gameStateService.seek(this.gameStateService.get_current_state()[0].history().length);
+  }
+
 }
