@@ -3,7 +3,7 @@
   <div *ngIf="isLoaded(state$ | async) && modelSettings !== null; else second" class="h-full w-full flex flex-col">
     <div class="w-full">
       <div matTooltip="The type of commentary that the model should aim to generate"> Commentary type: </div>
-      <mat-radio-group color="primary" aria-label="Select an option" [(ngModel)]="modelSettings.target_type" (ngModelChange)="updateCommentaryType()">
+      <mat-radio-group id="commentary_type" color="primary" aria-label="Select an option" [(ngModel)]="modelSettings.target_type" (ngModelChange)="updateCommentaryType()">
         <mat-radio-button *ngFor="let commentary_type of modelSettings.commentary_types" [value]="commentary_type[0]">{{commentary_type[1]}}</mat-radio-button>
         <!--
         <mat-radio-button value="MoveDesc">Move description</mat-radio-button>
@@ -18,7 +18,7 @@
     <div class="w-full ">
       <div class="flex w-full justify-between">
         <div matTooltip="On if the model should sample the next token, off otherwise">Sample: </div>
-        <mat-slide-toggle [(ngModel)]="modelSettings.do_sample" (ngModelChange)="updateSample()" color="primary"></mat-slide-toggle>
+        <mat-slide-toggle id="sample" [(ngModel)]="modelSettings.do_sample" (ngModelChange)="updateSample()" color="primary"></mat-slide-toggle>
       </div>
     </div>
     <div class="w-full">
@@ -29,7 +29,7 @@
       </div>
       <div class="flex w-full">
         <div class="flex justify-center items-center">{{modelSettings.min_temperature}}</div>
-        <mat-slider class="w-full" [min]="modelSettings.min_temperature" [max]="modelSettings.max_temperature" name="temperature"  step="0.1" discrete [displayWith]="formatLabel" color="primary" [disabled]="!modelSettings.do_sample">
+        <mat-slider id="temperature" class="w-full" [min]="modelSettings.min_temperature" [max]="modelSettings.max_temperature" name="temperature"  step="0.1" discrete [displayWith]="formatLabel" color="primary" [disabled]="!modelSettings.do_sample">
           <input matSliderThumb [(ngModel)]="modelSettings.temperature" (ngModelChange)="updateTemperature()">
         </mat-slider>
         <div class="flex justify-center items-center">{{modelSettings.max_temperature}}</div>
@@ -42,7 +42,7 @@
       </div>
       <div class="flex w-full">
         <div class="flex justify-center items-center">{{1}}</div>
-        <mat-slider class="w-full" [min]="1" [max]="modelSettings.max_max_new_tokens" name="max_new_tokens"  step="1" discrete [displayWith]="formatLabel" color="primary" >
+        <mat-slider id="max_new_tokens" class="w-full" [min]="1" [max]="modelSettings.max_max_new_tokens" name="max_new_tokens"  step="1" discrete [displayWith]="formatLabel" color="primary" >
           <input matSliderThumb [(ngModel)]="modelSettings.max_new_tokens" (ngModelChange)="updateMaxNewTokens()">
         </mat-slider>
           <div class="flex justify-center items-center">{{modelSettings.max_max_new_tokens}}</div>
@@ -50,7 +50,7 @@
     </div>
     <div class="h-full box-border w-full flex flex-col">
       <div matTooltip="Specify a commentary prefix that you would like the model to autocomplete"> Prompt prefix: </div>
-      <textarea style="resize: none" class="rounded-md h-full pl-2 w-full bg-gray-200 text-small text-gray-900 min-h-32 pt-1" id="prefix" placeholder="Prompt prefix..." [(ngModel)]="modelSettings.prefix" (ngModelChange)="updatePrefix()" name="prefix"></textarea>
+      <textarea id="prefix" style="resize: none" class="rounded-md h-full pl-2 w-full bg-gray-200 text-small text-gray-900 min-h-32 pt-1" placeholder="Prompt prefix..." [(ngModel)]="modelSettings.prefix" (ngModelChange)="updatePrefix()" name="prefix"></textarea>
     </div>
   </div>
   <ng-template #second>
@@ -62,7 +62,7 @@
         <div>
           A network error has occured while initializing model settings.
         </div>
-        <button mat-fab extended color="primary" (click)="onRetryModelSettings()">
+        <button id="model_settings_retry" mat-fab extended color="primary" (click)="onRetryModelSettings()">
           <mat-icon>replay</mat-icon>
           Retry
         </button>
