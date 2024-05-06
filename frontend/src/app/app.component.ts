@@ -18,8 +18,8 @@ import { SeeTopkComponent } from './components/see-topk/see-topk.component';
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
-export class AppComponent implements OnInit, OnDestroy {
-  title = 'frontend';
+export class AppComponent {
+  title = 'Chess commentary generation';
 
   modelBackendService: ModelBackendService;
   gameStateService: GameStateService;
@@ -33,13 +33,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.modelBackendService = modelBackendService;
     this.gameStateService = gameStateService;
   }
-
-  ngOnDestroy(): void {
-  }
-
-  ngOnInit(): void {
-  }
-
 
   public onRequestFlip() {
     this.flipped = !this.flipped;
