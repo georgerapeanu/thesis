@@ -7,11 +7,12 @@ describe('ModelSettingsComponent', () => {
   let fixture: ComponentFixture<ModelSettingsComponent>;
 
   beforeEach(async () => {
+
     await TestBed.configureTestingModule({
       imports: [ModelSettingsComponent]
     })
     .compileComponents();
-    
+
     fixture = TestBed.createComponent(ModelSettingsComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -20,4 +21,5 @@ describe('ModelSettingsComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
 });

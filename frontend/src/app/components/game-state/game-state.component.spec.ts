@@ -247,4 +247,9 @@ describe('GameStateComponent', () => {
     expect(component.pgn).withContext('pgn should be changed').toEqual('1. d4 Nf6');
   });
 
+  it('should unsubscribe from observables on destroy', () => {
+    fixture.destroy();
+    expect(state_observable.observed).toBeFalse();
+  });
+
 });

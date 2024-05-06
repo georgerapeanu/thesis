@@ -68,6 +68,6 @@ export class CommentaryComponent implements OnInit, OnDestroy {
   }
 
   get commentary(): string {
-    return this.raw_commentary.replaceAll("<n>", "\n");
+    return this.raw_commentary;
   }
 }
