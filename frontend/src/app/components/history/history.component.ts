@@ -109,7 +109,6 @@ export class HistoryComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent): void {
-    console.log("here");
     if (!(event.target instanceof HTMLElement)) return;
     if(["INPUT", "TEXTAREA"].includes(event.target?.nodeName)) {
       return ;
