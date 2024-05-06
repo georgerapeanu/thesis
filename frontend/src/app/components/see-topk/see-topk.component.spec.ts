@@ -87,4 +87,9 @@ describe('SeeTopkComponent', () => {
     component.onClick([1, " a"]);
     expect(modelBackendService.set_prefix).toHaveBeenCalledWith("a");
   });
+
+  it('should unsubscribe from all observables on destroy', () => {
+    fixture.destroy();
+    expect(topKObservable.observed).toBeFalse();
+  });
 });
