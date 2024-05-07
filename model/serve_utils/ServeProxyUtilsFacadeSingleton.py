@@ -271,7 +271,7 @@ class ServeProxyUtilsFacadeSingleton(object):
         return {
             'max_max_new_tokens': self.__cfg['max_new_tokens'],
             'commentary_types': list(self.TARGET_TYPES_TO_NAMES.items()),
-            'count_past_boards': self.__cfg['count_past_boards']
+            'count_past_boards': self.__cfg['count_past_boards'],
             'temperature': 1.0,
             'do_sample': True,
             'target_type': '',

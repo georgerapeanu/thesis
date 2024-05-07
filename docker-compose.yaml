@@ -14,7 +14,7 @@ services:
       file: ./model/docker-compose.yaml
       service: proxy 
 
-  frontend:
+  nginx:
     build: ./frontend 
     ports:
       - "4200:80"

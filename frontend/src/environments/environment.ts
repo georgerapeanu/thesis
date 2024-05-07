@@ -1,3 +1,3 @@
 export const environment = {
-  modelURL: 'http://185.104.183.225:8080'
+  modelURL: 'http://localhost:4200/api'
 };
