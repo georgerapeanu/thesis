@@ -34,7 +34,8 @@ describe('ModelSettingsComponent', () => {
       'commentary_types': [['type 1', 'type 1'], ['type 2', 'type 2']],
       'max_max_new_tokens': 100,
       'max_new_tokens': 100,
-      'target_type': ""
+      'target_type': "",
+      'count_past_boards': 4
     }));
     model_settings_observable = new Subject<ModelSettingsDTO>();
     model_settings_progress_observable = new BehaviorSubject<ProgressEnum>(ProgressEnum.LOADED);

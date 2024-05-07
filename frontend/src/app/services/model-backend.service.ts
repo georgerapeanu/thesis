@@ -134,7 +134,8 @@ export class ModelBackendService {
       return throwError(() => "Model settings have not been initialized yet");
     }
     var current_board = chess.fen();
-    var past_boards = chess.history({ verbose: true }).slice(-2).map((move) => move.before);
+    let history = chess.history({ verbose: true });
+    var past_boards = history.slice(history.length - this.model_settings.count_past_boards).map((move) => move.before);
     var request_dict: AnnotateRequestDict = {
       "past_boards": past_boards,
       "current_board": current_board,
@@ -170,7 +171,8 @@ export class ModelBackendService {
       return throwError(() => "Model settings have not been initialized yet");
     }
     var current_board = chess.fen();
-    var past_boards = chess.history({ verbose: true }).slice(-2).map((move) => move.before);
+    let history = chess.history({ verbose: true });
+    var past_boards = history.slice(history.length - this.model_settings.count_past_boards).map((move) => move.before);
     var request_dict: TopKRequestDict = {
       "past_boards": past_boards,
       "current_board": current_board,
@@ -205,7 +207,8 @@ export class ModelBackendService {
           max_new_tokens: json['max_max_new_tokens'],
           max_max_new_tokens: json['max_max_new_tokens'],
           prefix: "",
-          commentary_types: json['target_types']
+          commentary_types: json['target_types'],
+          count_past_boards: json['count_past_boards']
         });
       })
     );

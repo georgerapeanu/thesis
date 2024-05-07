@@ -34,7 +34,8 @@ describe('CommentaryComponent', () => {
       'commentary_types': [],
       'max_max_new_tokens': 100,
       'max_new_tokens': 100,
-      'target_type': ""
+      'target_type': "",
+      "count_past_boards": 4
     }));
     commentary_observable = new Subject<string>();
     model_settings_observable = new BehaviorSubject(model_settings);

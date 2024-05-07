@@ -9,6 +9,7 @@ export class ModelSettingsDTO {
   min_temperature: number;
   max_temperature: number;
   max_max_new_tokens: number;
+  count_past_boards: number;
 
   constructor(constructor_dict: {
     temperature: number,
@@ -19,7 +20,8 @@ export class ModelSettingsDTO {
     commentary_types: Array<[string, string]>,
     min_temperature: number,
     max_temperature: number,
-    max_max_new_tokens: number
+    max_max_new_tokens: number,
+    count_past_boards: number
   } ) {
     this.temperature = constructor_dict.temperature;
     this.do_sample = constructor_dict.do_sample;
@@ -30,7 +32,7 @@ export class ModelSettingsDTO {
     this.min_temperature = constructor_dict.min_temperature;
     this.max_temperature = constructor_dict.max_temperature;
     this.max_max_new_tokens = constructor_dict.max_max_new_tokens;
-
+    this.count_past_boards = constructor_dict.count_past_boards;
   }
 
   clone(): ModelSettingsDTO {
@@ -43,7 +45,8 @@ export class ModelSettingsDTO {
       commentary_types: JSON.parse(JSON.stringify(this.commentary_types)),
       min_temperature: this.min_temperature,
       max_temperature: this.max_temperature,
-      max_max_new_tokens: this.max_max_new_tokens
+      max_max_new_tokens: this.max_max_new_tokens,
+      count_past_boards: this.count_past_boards
     });
   }
 }
