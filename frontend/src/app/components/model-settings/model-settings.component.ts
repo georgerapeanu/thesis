@@ -6,7 +6,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatRadioModule } from '@angular/material/radio';
 import { CommonModule } from '@angular/common';
 import { ModelBackendService } from '../../services/model-backend.service';
-import { Observable, Subscription, delay } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import { ModelSettingsDTO } from '../../dto/modelSettingsDTO';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
