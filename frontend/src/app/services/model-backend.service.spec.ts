@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { ModelBackendService } from './model-backend.service';
 import { HttpClientModule } from '@angular/common/http';
-import { BehaviorSubject, Subject, first, firstValueFrom } from 'rxjs';
+import { BehaviorSubject, Subject, first, firstValueFrom, skip } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { ModelSettingsDTO } from '../dto/modelSettingsDTO';
 import { Chess } from 'chess.js';
@@ -453,7 +453,7 @@ describe('ModelBackendService', () => {
   });
 
   it('should emit failed progress when model settings is not able to be fetched', (done) => {
-    service.getModelSettingsProgressObservable().subscribe({
+    service.getModelSettingsProgressObservable().pipe(skip(1)).subscribe({
       next: (progress) => {
         if(progress != ProgressEnum.LOADING) {
           expect(progress).toEqual(ProgressEnum.FAILED);
@@ -461,9 +461,30 @@ describe('ModelBackendService', () => {
         }
       }
     });
-    infoObservable.error("[]");
-    infoObservable.error("[]");
-    infoObservable.error("[]");
-    infoObservable.error("[]");
+    infoObservable.error(undefined);
+    infoObservable.error(undefined);
+    infoObservable.error(undefined);
+    infoObservable.error(undefined);
+  });
+
+  it('should manual retry', (done) => {
+    infoObservable.error(undefined);
+    infoObservable.error(undefined);
+    infoObservable.error(undefined);
+    infoObservable.error(undefined);
+    service.getModelSettingsDistinctUntilChangedObservable().pipe(first()).subscribe((received_model_settings) => {
+      service.retryAll();
+      expect(received_model_settings).toEqual(model_settings);
+    });
+    service.retryAll();
+    let response = new Response(JSON.stringify(model_settings), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    infoObservable.next(response);
+    expect(true).toBeTrue();
+    done();
   });
 });
