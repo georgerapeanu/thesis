@@ -270,8 +270,17 @@ class ServeProxyUtilsFacadeSingleton(object):
     def get_info(self) -> Dict:
         return {
             'max_max_new_tokens': self.__cfg['max_new_tokens'],
-            'target_types': list(self.TARGET_TYPES_TO_NAMES.items()),
+            'commentary_types': list(self.TARGET_TYPES_TO_NAMES.items()),
             'count_past_boards': self.__cfg['count_past_boards']
+            'temperature': 1.0,
+            'do_sample': True,
+            'target_type': '',
+            'max_new_tokens': 1000,
+            'max_max_new_tokens': 1000,
+            'min_temperature': 0.1,
+            'max_temperature': 3.0,
+            'prefix': '',
+            'count_past_boards': 2
         }
 
 if __name__ == '__main__':

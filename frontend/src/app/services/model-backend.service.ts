@@ -53,9 +53,6 @@ export class ModelBackendService {
     .pipe(
       filter((value: ModelSettingsDTO | null) => value !== null),
       map((value) => value as ModelSettingsDTO),
-      map((value) => {
-        return value;
-      }),
       distinctUntilChanged((prev, curr) => {
         return JSON.stringify(prev) === JSON.stringify(curr);
       })
@@ -65,9 +62,6 @@ export class ModelBackendService {
       this.gameStateService.get_observable_state().pipe(map((_value) => null)),
       this.distinct_until_changed_model_settings_observable
       .pipe(
-        map((value) => {
-          return value;
-        }),
         distinctUntilChanged((prev, curr) => {
           return (
             prev.temperature === curr.temperature &&
@@ -173,6 +167,7 @@ export class ModelBackendService {
     var current_board = chess.fen();
     let history = chess.history({ verbose: true });
     var past_boards = history.slice(history.length - this.model_settings.count_past_boards).map((move) => move.before);
+
     var request_dict: TopKRequestDict = {
       "past_boards": past_boards,
       "current_board": current_board,
@@ -199,15 +194,15 @@ export class ModelBackendService {
       switchMap(response => from(response.json())),
       map((json) => {
         return new ModelSettingsDTO({
-          do_sample: true,
-          temperature: 1,
-          min_temperature: 0.1,
-          max_temperature: 3,
-          target_type: "",
-          max_new_tokens: json['max_max_new_tokens'],
+          do_sample: json['do_sample'],
+          temperature: json['temperature'],
+          min_temperature: json['min_temperature'],
+          max_temperature: json['max_temperature'],
+          target_type: json['target_type'],
+          max_new_tokens: json['max_new_tokens'],
           max_max_new_tokens: json['max_max_new_tokens'],
-          prefix: "",
-          commentary_types: json['target_types'],
+          prefix: json['prefix'],
+          commentary_types: json['commentary_types'],
           count_past_boards: json['count_past_boards']
         });
       })
@@ -229,7 +224,7 @@ export class ModelBackendService {
   manualRetryTopK(): void {
     this.last_topk_subscription?.unsubscribe();
     this.topk_behavior_subject.next(new TopKDTO([], ProgressEnum.LOADING));
-    this.last_topk_subscription = this.getTopK(this.gameStateService.get_chess_game_at_current_index(2))
+    this.last_topk_subscription = this.getTopK(this.gameStateService.get_chess_game_at_current_index(this.model_settings?.count_past_boards || 0))
     .pipe(retry({ delay: 1000, count: 3}))
     .pipe(map((data) => new TopKDTO(data, ProgressEnum.LOADED)))
     .subscribe({
