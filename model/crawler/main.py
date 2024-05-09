@@ -9,9 +9,6 @@ import pickle
 from typing import *
 
 
-SAVE_PATH = ""
-
-
 def parse_response_text(game_string: str):
     comments = re.findall("game_notes.*", game_string)[0].removesuffix("];").removeprefix("game_notes = [").strip()
     comments_list = list(map(lambda x: urllib.parse.unquote(x.strip().removeprefix("\"").removesuffix("\"").strip()),
@@ -34,9 +31,9 @@ def parse_response_text(game_string: str):
     return pl.DataFrame(data)
 
 
-def save_game(args: Tuple[str, int], skipIfExists=False):
+def save_game(save_path: str, args: Tuple[str, int], skipIfExists=False):
     split, game_id = args
-    if skipIfExists and os.path.exists(os.path.join(SAVE_PATH, f"{split}/{game_id}.parquet")):
+    if skipIfExists and os.path.exists(os.path.join(save_path, f"{split}/{game_id}.parquet")):
         return
     print(f"Doing {split}/{game_id}")
     time.sleep(0.35)
@@ -44,8 +41,9 @@ def save_game(args: Tuple[str, int], skipIfExists=False):
     if response.status_code != 200:
         print(response.text)
         raise Exception("Something went bad")
-    parse_response_text(response.text).write_parquet(os.path.join(SAVE_PATH, f"{split}/{game_id}.parquet"))
+    parse_response_text(response.text).write_parquet(os.path.join(save_path, f"{split}/{game_id}.parquet"))
     print(f"Done {split}/{game_id}")
+
 
 def crawl(pickle_path: str, raw_data_path: str):
     SPLITS = [
@@ -53,14 +51,12 @@ def crawl(pickle_path: str, raw_data_path: str):
         ("test", os.path.join(pickle_path, "test_links.p")),
         ("valid", os.path.join(pickle_path, "valid_links.p")),
     ]
-    global SAVE_PATH
-    SAVE_PATH = raw_data_path
 
     WORK = [
         (x[0], int(game[1].split("gm=", 1)[1])) for x in SPLITS for game in pickle.load(open(x[1], "rb"))
     ]
 
     for i, work in enumerate(WORK):
-        save_game(work, False)
+        save_game(raw_data_path, work, False)
         print(f"Done {i + 1}/{len(WORK)}")
 

@@ -24,7 +24,6 @@ from model.modules.ResidualEncoder import ResidualEncoder
 from model.modules.TransformerEncoderBlock import TransformerEncoderBlock
 from model.modules.TransformerDecoderBlock import TransformerDecoderBlock
 from model.predict import AlphaZeroPredictor, ActualBoardPredictor
-from utils.configs import ModelConfig, SharedConfig, MultiHeadConfig
 from typing import *
 import math
 import lightning as L
