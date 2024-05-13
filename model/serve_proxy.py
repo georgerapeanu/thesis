@@ -42,7 +42,9 @@ def get_commentary():
         logger.warning("Error in payload: " + str(e))
         return flask.jsonify({"error": str(e)}), 400
 
-    return app.response_class(instance.get_commentary(request.data), mimetype='plain/text')
+    resp = app.response_class(instance.get_commentary(request.data), mimetype='plain/text')
+    resp.headers['X-Accel-Buffering'] = "no";
+    return resp
 
 
 @app.post('/topk')
