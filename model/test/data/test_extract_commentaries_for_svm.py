@@ -52,7 +52,6 @@ class TestExtractCommentariesForSVM(unittest.TestCase):
         def f_write(x):
             nonlocal written_lines
             written_lines.append(x)
-            print(f"Debug {written_lines}, {x}")
 
         mock_f.write.side_effect = f_write
 
