@@ -104,7 +104,7 @@ if __name__ == '__main__':
         'hash': 128,
         'minimum_thinking_time': 1,
         'raw_data_path': "../raw_data",
-        'processed_data_path': "../processed_data",
+        'processed_path': "../processed_data",
         'engine_depth': 5,
         'mate_value': 10000
     }
