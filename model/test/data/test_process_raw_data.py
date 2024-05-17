@@ -51,7 +51,7 @@ class TestExtractCommentariesForSVM(unittest.TestCase):
         }
 
         (vectorizer_mock, classifiers_mock) = (mock.Mock(), [mock.MagicMock()])
-        classifiers_mock[0].transform.return_value = [0, 1]
+        classifiers_mock[0].predict.return_value = [0, 1]
 
         mock_pickle_load.return_value = (vectorizer_mock, classifiers_mock)
 
@@ -124,7 +124,7 @@ class TestExtractCommentariesForSVM(unittest.TestCase):
         process_raw_data.process_raw_data(config)
 
         mock_open.assert_called_with("artifacts_mock/svm.p", "rb")
-        self.assertEqual(dfs_rows, [[('', '4', 'training', 10, 10, 1)], [('', '4', 'testing', 10, 10, 1)], [('', '4', 'validing', 10, 10, 1)]])
+        self.assertEqual(dfs_rows, [[('', '4', 'training', 10, 10, 0)], [('', '4', 'testing', 10, 10, 0)], [('', '4', 'validing', 10, 10, 0)]])
 
     @mock.patch('data.process_raw_data.pickle.load')
     @mock.patch('data.process_raw_data.stockfish.Stockfish')
@@ -170,7 +170,7 @@ class TestExtractCommentariesForSVM(unittest.TestCase):
         }
 
         (vectorizer_mock, classifiers_mock) = (mock.Mock(), [mock.MagicMock()])
-        classifiers_mock[0].transform.return_value = [0, 1]
+        classifiers_mock[0].predict.return_value = [0, 1]
 
         mock_pickle_load.return_value = (vectorizer_mock, classifiers_mock)
 
@@ -244,8 +244,8 @@ class TestExtractCommentariesForSVM(unittest.TestCase):
         process_raw_data.process_raw_data(config)
 
         mock_open.assert_called_with("artifacts_mock/svm.p", "rb")
-        self.assertEqual(dfs_rows, [[('', '4', 'training', 10000, 10000, 1)], [('', '4', 'testing', 10000, 10000, 1)],
-                                    [('', '4', 'validing', 10000, 10000, 1)]])
+        self.assertEqual(dfs_rows, [[('', '4', 'training', 10000, 10000, 0)], [('', '4', 'testing', 10000, 10000, 0)],
+                                    [('', '4', 'validing', 10000, 10000, 0)]])
 
     @mock.patch('data.process_raw_data.pickle.load')
     @mock.patch('data.process_raw_data.stockfish.Stockfish')
@@ -291,7 +291,7 @@ class TestExtractCommentariesForSVM(unittest.TestCase):
         }
 
         (vectorizer_mock, classifiers_mock) = (mock.Mock(), [mock.MagicMock()])
-        classifiers_mock[0].transform.return_value = [0, 1]
+        classifiers_mock[0].predict.return_value = [1, 0]
 
         mock_pickle_load.return_value = (vectorizer_mock, classifiers_mock)
 
