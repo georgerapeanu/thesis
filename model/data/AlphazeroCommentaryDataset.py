@@ -169,7 +169,6 @@ class AlphazeroCommentaryDataset(Dataset):
         past_boards = [chess.Board(x[0]) for x in raw_data[0]]
         past_evals = [x[1] for x in raw_data[0]]
 
-        #TODO experiment with mirroring so game does not have to be relearned
         answer_board[-STATE_SIZE:, :, :] = self.__get_state_features(current_board)
         answer_board[-STATE_SIZE - MOVE_SIZE:-STATE_SIZE, :, :] = self.__get_all_move_features(current_board)
         answer_board[-STATE_SIZE - POSITIONAL_SIZE - MOVE_SIZE:-STATE_SIZE - MOVE_SIZE, :,
