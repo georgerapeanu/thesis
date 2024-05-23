@@ -1,5 +1,16 @@
+@startuml
+left to right direction
 class Environment {
   modelURL: string
+}
+
+
+package enums {
+  enum ProgressEnum {
+    LOADING
+    LOADED
+    FAILED
+  }
 }
 
 package dto {
@@ -7,8 +18,32 @@ package dto {
     + isMate: boolean
     + score: number
     + depth: number
+    + constructor(isMate: boolean, score: number, depth: number)
   }
-{
+
+  class ModelSettingsDTO {
+    + temperature: number
+    + do_sample: boolean
+    + target_type: string
+    + max_new_tokens: number
+    + prefix: string
+    + commentary_types: Array<[string, string]>
+    + min_temperature: number
+    + max_temperature: number
+    + max_max_new_tokens: number
+    + count_past_boards: number
+    
+    + constructor(...)
+    + clone(): ModelSettingsDTO
+  }
+
+  class TopKDTO {
+    + topk: Array<[number, string]>
+    + state: ProgressEnum
+
+    constructor(topk: Array<[number, string]>, state: ProgressEnum)
+  }
+}
 
 package services {
   class ChessEngineService {
@@ -20,5 +55,188 @@ package services {
 
     + constructor()
     + requestEvaluation(chess: Chess): rxjs.Observable<EvaluationDTO | null>
+
+  }
+
+  class GameStateService {
+    - current_game: Chess 
+    - move_index: number 
+    - subject: rxjs.BehaviorSubject<[Chess, number]>
+
+    + constructor()
+    + set_current_fen(new_fen: string): Error | null
+    + set_pgn(pgn: string): Error | null
+    + get_observable_state(): rxjs.Observable<[Chess, number]>
+    + move(board_move: Move)
+    + seek(move_index: number): Error | null
+    + undo(): Error | null
+    + redo(): Error | null
+    + get_chess_game_at_current_index(min_history: number): Chess
+  }
+
+  class ModelBackendService {
+    - model_settings: ModelSettingsDTO | null
+    - decoder: TextDecoder
+    - topk_behavior_subject: rxjs.BehaviorSubject<TopKDTO>
+    - last_topk_subscription: rxjs.Subscription | null
+    - last_model_settings_subscription: rxjs.Subscription | null
+    - model_settings_subject: rxjs.BehaviorSubject<ModelSettingsDTO | null>
+    - distinct_until_changed_model_settings_observable: rxjs.Observable<ModelSettingsDTO>
+    - model_settings_progress_behavior_subject: rxjs.BehaviorSubject<ProgressEnum>
+
+    + constructor()
+    + set_temperature(value: number)
+    + set_doSample(value: boolean)
+    + set_commentary_type(value: string)
+    + set_max_new_tokens(value: number)
+    + set_prefix(value: number)
+    + get_prefix(): string
+    + getAnnotation(chess: Chess): rxjs.Observable<string>
+    + getTopK(chess: Chess): rxjs.Observable<Array<[number, string]>>
+    + getInfoObservable(): rxjs.Observable<ModelSettingsDTO>
+    + getModelSettingsDistinctUntilChangedObservable(): rxjs.Observable<ModelSettingsDTO>
+    + getTopKObserable(): rxjs.Observable<TopKDTO>
+    + getModelSettingsProgressObservable(): rxjs.Observable<ProgressEnum>
+    manualRetryTopK()
+    manulaRetryModelSettings()
+    retryAll()
+  }
+
+  ModelBackendService -> GameStateService
+}
+
+package components {
+  class BoardComponent {
+    flipped: boolean
+    ranks: Array<string>
+    files: Array<string>
+    squares: Array<string>
+    lastGame: Chess | null
+
+    focusedSquare: string | null
+    shownMoves: Array<string>
+    lastMove: Move | null
+    pendingPromotionMove: Move | null
+    gameStateSubscription: rxjs.Subscription | null
+
+    constructor(gameStateService: GameStateService)
+    ngOnInit()
+    ngOnChanges(changes:SimpleChanges)
+    ngOnDestroy()
+    - updateComponentState(game: Chess | null, flipped: boolean, focusedSquare: string | null, pendingPromotionMove: Move | null)
+    + getImageForCell(square: string): string | null 
+    + isSquareByIndexBlack(index: number): boolean 
+    + focusSquare(square: string) 
+    + unfocusCurrentSquare()
+    + isLegalMove(square: string): boolean 
+    + isCapture(square: string): boolean
+    + isCheck(square: string)
+    + clickSquare(square: string)
+    + isPartOfLastMove(square: string): boolean 
+    + cancelPromotion()
+    + onDragOver(e: DragEvent)
+    + getPromotionPieces(): Array<string>
+    + promote(piece: string)
+  }
+
+  class CommentaryComponent {
+    + raw_commentary: string 
+    + prefix: string 
+    + error: String | null 
+    + is_placeholder: boolean 
+    prefixSubscription: rxjs.Subscription
+    annotateSubscription: rxjs.Subscription
+
+    constructor(modelBackendService: ModelBackendService, gameStateService: GameStateService)
+    ngOnInit()
+    ngOnDestroy()
+    request_commentary()
+  }
+
+  class GameStateComponent {
+    pgn: string 
+    fen: string 
+    fen_invalid: boolean 
+    pgn_invalid: boolean 
+    gameStateSubscription: rxjs.Subscription
+
+    constructor(gameStateService: GameStateService)
+
+    ngOnInit()
+    ngOnDestroy()
+    onEnterFEN()
+    onEnterPGN()
+    onFocusOut()
+  }
+
+  class HistoryComponent {
+    moves_enumerated: Array<string>
+    moves_indexed: Array<number | null>
+    current_index: number 
+    toFocus: ElementRef | undefined 
+    forceRefocus: boolean 
+    gameStateSubscription: rxjs.Subscription 
+    evaluationSubscription: rxjs.Subscription 
+    lastEvaluation: EvaluationDTO | null
+    evaluationPending: boolean 
+    keyCommandObservable: rxjs.SubjectMstring>
+    keyCommandSubscription: rxjs.Subscription | null
+    requestFlip: EventEmitter<null>
+
+    constructor(gameStateService: GameStateService, ChessEngineService: ChessEngineService)
+
+    ngOnInit()
+    ngOnDestroy()
+    ngAfterViewChecked()
+    onClick(index: number | null)
+    onRequestFlip()
+    handleKeyboardEvent(event: KeyboardEvent)
+  }
+
+  class ModelSettingsComponent {
+    modelSettings: ModelSettingsDTO | null 
+    modelSettingsSubscription: rxjs.Subscription | null 
+    state$: rxjs.Observable<ProgressEnum>
+
+    constructor(modelBackendService: ModelBackendService)
+
+    ngOnDestroy()
+    ngOnInit()
+    formatLabel(value: number)
+    updateCommentaryType()
+    updateSample()
+    updateTemperature()
+    updateMaxNewTokens()
+    updatePrefix()
+    onRetryModelSettings()
+    isLoading(state: ProgressEnum | null): boolean 
+    isLoaded(state: ProgressEnum | null): boolean 
+    isFailed(state: ProgressEnum | null): boolean 
+  }
+  
+  class SeeTopkComponent {
+    + topk: Array<[number, string]>
+    topkSubscription: rxjs.Subscription | null 
+    state: ProgressEnum
+
+    constructor(modelBackendService: ModelBackendService)
+    ngOnDestroy()
+    ngOnInit()
+    isDisabled(prob_token: [number, string]): boolean
+    onClick(prob_token: [number, string])
+    onRetryTopK()
+    isLoading(): boolean
+    isLoaded(): boolean
+    isFailed(): boolean
   }
 }
+
+components.HistoryComponent --> dto.EvaluationDTO
+dto.TopKDTO --> ProgressEnum
+services.ModelBackendService --> dto.ModelSettingsDTO
+services.ModelBackendService --> dto.TopKDTO
+services.ChessEngineService --> dto.EvaluationDTO
+services --> Environment
+components --> services
+
+@enduml
