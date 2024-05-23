@@ -1,0 +1,39 @@
+@startuml
+
+left to right direction
+
+component "Docker" {
+  port "/ "
+  port "/api"
+
+  "/ " -- [NGINX]
+  "/api" -- [NGINX]
+
+  "get_commentary" -- [Proxy]
+  "info" -- [Proxy]
+  "topk" -- [Proxy]
+
+  "get_commentary_execution" - [Model]
+
+  [Proxy] ..> "get_commentary_execution"
+  [NGINX] ..> "get_commentary"
+  [NGINX] ..> "topk"
+  [NGINX] ..> "info"
+
+  note as API_NOTE
+    Redirect requests to proxy 
+  end note 
+
+  note as STATIC_FILES_NOTE
+    Serves static web files generated with angular
+  end note
+
+  "/ " .. STATIC_FILES_NOTE 
+  "/api" .. API_NOTE
+}
+
+[Browser] ..> "/ "
+[Browser] ..> "/api"
+
+@enduml
+

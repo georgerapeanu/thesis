@@ -1,0 +1,25 @@
+@startuml
+!pragma teoz true
+
+actor User 
+participant ModelSettingsComponent 
+participant ModelBackendService 
+
+opt Model settings changed/initialized
+  ModelBackendService --> ModelSettingsComponent++: Set model settings.
+end
+
+alt Model settings succesfully initialized from backend
+  User -> ModelSettingsComponent: Change model settings. 
+  ModelSettingsComponent -> ModelBackendService: Change model settings. 
+else
+  ModelSettingsComponent --> User: Present error and retry button.
+  opt User
+    User -> ModelSettingsComponent: Press retry button.
+    ModelSettingsComponent -> ModelBackendService --: Retry the initialization phase.
+  end
+end
+
+
+@enduml
+

@@ -1,0 +1,25 @@
+@startuml
+!pragma teoz true
+
+actor User 
+participant GameStateComponent 
+participant GameStateService
+
+opt Game state changed
+  GameStateService --> GameStateComponent++: Set current FEN/PGN according to the current game state. 
+end
+
+User -> GameStateComponent : Change PGN/FEN input fields.
+GameStateComponent -> GameStateService: Set PGN/FEN to desired value.
+
+opt PGN/FEN is invalid
+  GameStateService --> GameStateComponent: Return error
+  GameStateComponent --> GameStateComponent: Render error.
+  ||0||
+  deactivate GameStateComponent
+end
+
+
+
+@enduml
+

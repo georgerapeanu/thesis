@@ -1,0 +1,21 @@
+@startuml
+!pragma teoz true
+
+participant HistoryComponent 
+participant GameStateService 
+participant ChessEngineService
+participant ChessEngineWebWorker
+
+opt Game state has changed
+  GameStateService -> ChessEngineService ++: request evaluation of new chess position.
+  opt ChessEngineWorker is processing previous position
+    ChessEngineService -> ChessEngineWebWorker ++: stop evaluation of previous position.
+    ChessEngineWebWorker --> ChessEngineService: Confirms stop. 
+  end
+  ChessEngineService -> ChessEngineWebWorker: Request evaluation for chess position.
+  ChessEngineWebWorker -> ChessEngineService --: Return evaluations as a stream.
+  ChessEngineService -> HistoryComponent--: Render evaluation.
+end
+
+@enduml
+

@@ -1,0 +1,38 @@
+@startuml
+!pragma teoz true
+
+actor User 
+participant BoardComponent
+participant GameStateService 
+
+opt Game state changed
+  GameStateService --> BoardComponent++: Set board state to the current game state. 
+end
+
+User -> BoardComponent: Click on chess board square.
+BoardComponent -> BoardComponent: Displays legal moves.
+User -> BoardComponent: Click square.
+
+alt User has not clicked a valid move
+ BoardComponent --> BoardComponent : Cancel move.
+else 
+  alt User has not selected a promotion move
+    BoardComponent -> GameStateService: Update game state.
+  else
+    BoardComponent -> BoardComponent: Present promotion selection menu.
+    User -> BoardComponent: User clicks promotion.
+    alt User has selected a valid promotion 
+      BoardComponent -> GameStateService: Update game state.
+    else 
+      BoardComponent --> BoardComponent : Cancel move.
+      ||0||
+      deactivate BoardComponent
+    end
+  end
+end
+
+
+
+
+@enduml
+

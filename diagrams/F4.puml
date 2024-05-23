@@ -1,0 +1,50 @@
+@startuml
+!pragma teoz true
+
+actor User 
+participant CommentaryComponent 
+participant ModelBackendService 
+participant GameStateService 
+participant NGINX 
+participant Proxy 
+participant Model 
+
+opt Model settings prefix changed
+  ModelBackendService --> CommentaryComponent ++: Set prefix preview according to the current game state. 
+end
+
+User -> CommentaryComponent: Click request commentary button.
+CommentaryComponent -> ModelBackendService ++: Request commentary.
+ModelBackendService -> GameStateService ++: Request current game state.
+GameStateService --> ModelBackendService --: Returns current game state.
+ModelBackendService -> NGINX ++: Request commentary for current game state and model settings.
+NGINX -> Proxy ++: Forward request to proxy.
+Proxy -> Proxy: Validate request.
+alt Request is invalid.
+  Proxy --> NGINX: Return error.
+else
+  loop Next token is cached
+    Proxy -> Proxy: Sample next token.
+  end
+  opt Tokens still need to be sampled
+    Proxy -> Model ++: Forward request with sampled tokens.
+    Model -> Model: Validate request.
+    alt Request is invalid
+      Model --> Proxy: Return error.
+    else
+      Model --> Proxy --: Return commentary execution.
+      Proxy -> Proxy: Cache commentary execution.
+    end
+    Proxy --> NGINX --: Return response.
+  end
+end
+NGINX --> ModelBackendService --: Return response.
+ModelBackendService --> CommentaryComponent --: Return response.
+CommentaryComponent --> CommentaryComponent: Render commentary or error.
+||0||
+deactivate CommentaryComponent
+
+
+
+@enduml
+
