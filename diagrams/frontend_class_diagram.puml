@@ -232,11 +232,11 @@ package components {
 }
 
 components.HistoryComponent --> dto.EvaluationDTO
-dto.TopKDTO --> ProgressEnum
+dto.TopKDTO --right> ProgressEnum
 services.ModelBackendService --> dto.ModelSettingsDTO
 services.ModelBackendService --> dto.TopKDTO
 services.ChessEngineService --> dto.EvaluationDTO
-services --> Environment
-components --> services
+services --right> Environment
+components --left> services
 
 @enduml

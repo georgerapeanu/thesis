@@ -1,5 +1,6 @@
 @startuml 
 !pragma useIntermediatePackages false
+left to right direction
 
 class serve_utils.SamplingStrategies.AbstractSamplingStrategy {
   <i>execute(self, logits: torch.tensor): torch.tensor</i>

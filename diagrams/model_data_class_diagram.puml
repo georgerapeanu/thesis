@@ -1,5 +1,4 @@
 @startuml 
-left to right direction
 !pragma useIntermediatePackages false
 
 class torch.utils.data.Dataset {
@@ -153,8 +152,8 @@ package data {
   AlphazeroCommentaryDataset.AlphazeroCommentaryDataset -up-|> torch.utils.data.Dataset
   ActualBoardCommentaryDataset.ActualBoardCommentaryDataset -up-|> torch.utils.data.Dataset
 
-  ActualBoardDataModule.ActualBoardDataModule --|> lightning.Datamodule 
-  AlphazeroStyleDataModule.AlphazeroStyleDataModule --|> lightning.Datamodule
+  ActualBoardDataModule.ActualBoardDataModule ------down|> lightning.Datamodule 
+  AlphazeroStyleDataModule.AlphazeroStyleDataModule ------down|> lightning.Datamodule
   
   ActualBoardDataModule.ActualBoardDataModule -up-> ActualBoardCommentaryDataset.ActualBoardCommentaryDataset
   AlphazeroStyleDataModule.AlphazeroStyleDataModule -up-> AlphazeroCommentaryDataset.AlphazeroCommentaryDataset
@@ -178,8 +177,8 @@ package crawler {
 }
 
 
-data.ActualBoardDataModule.ActualBoardDataModule -> crawler.Package
-data.AlphazeroStyleDataModule.AlphazeroStyleDataModule -> crawler.Package
+data.ActualBoardDataModule.ActualBoardDataModule -----down> crawler.Package
+data.AlphazeroStyleDataModule.AlphazeroStyleDataModule ------down> crawler.Package
 
 @enduml
 
