@@ -1,0 +1,24 @@
+class Environment {
+  modelURL: string
+}
+
+package dto {
+  class EvaluationDTO {
+    + isMate: boolean
+    + score: number
+    + depth: number
+  }
+{
+
+package services {
+  class ChessEngineService {
+    stockfish: Worker | null
+    request_number: number
+    messageBehaviorSubject: rxjs.BehaviorSubject<[number, string]>
+    messageToEvaluationRegex: RegExp
+    engine_busy: boolean
+
+    + constructor()
+    + requestEvaluation(chess: Chess): rxjs.Observable<EvaluationDTO | null>
+  }
+}

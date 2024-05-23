@@ -1,0 +1,87 @@
+@startuml 
+!pragma useIntermediatePackages false
+
+class serve_utils.SamplingStrategies.AbstractSamplingStrategy {
+  <i>execute(self, logits: torch.tensor): torch.tensor</i>
+}
+class serve_utils.SamplingStrategies.MultinomialSamplingStrategy {
+  __temperature: float 
+  __init__(self, temperature: float)
+  execute(self, logits: torch.tensor): torch.tensor
+}
+class serve_utils.SamplingStrategies.TopKSamplingStrategy {
+  __temperature: float 
+  __init__(self, temperature: float)
+  execute(self, logits: torch.tensor): torch.tensor
+}
+class serve_utils.Validators.BoardsValidator {
+  __count_past_boards: int 
+  __init__(self, next_validator: Optional[AbstractValidator])
+  _validate_self(self, data: any)
+}
+class serve_utils.Validators.JsonSchemaValidator {
+  __payload_schema: Dict 
+  __init__(self, next_validator: Optional[AbstractValidator])
+  _validate_self(self, data: any)
+}
+class serve_utils.Validators.MaxNewTokensValidator {
+  max_max_new_tokens: int 
+  default_max_new_tokens: int 
+  __init__(self, next_validator: Optional[AbstractValidator])
+  _validate_self(self, data: any)
+}
+class serve_utils.ServeModelUtilsFacadeSingleton.ServeModelUtilsFacadeSingleton {
+  __cfg: omegacong.DictConfig 
+  __model: torch.jit.ScriptModule 
+  __sp: sentencepiece.SentencePieceProcessor
+  __engine: stockfish.Stockfish 
+  TARGET_TYPES_TO_IDS: Dict[str, int] 
+  __commentary_validator: AbstractValidator 
+}
+class serve_utils.Validators.TargetTypeValidator {
+  __TARGET_TYPES_TO_IDS: Dict[str, int] 
+  __init__(self, next_validator: Optional[AbstractValidator])
+  _validate_self(self, data: any)
+}
+class serve_utils.Validators.TemperatureValidator {
+  __init__(self, next_validator: Optional[AbstractValidator])
+  _validate_self(self, data: any)
+}
+class serve_utils.ServeProxyUtilsFacadeSingleton.ServeProxyUtilsFacadeSingleton {
+  __cfg: Dict 
+  __sp: sentencepiece.SentencePieceProcessor 
+  TARGET_TYPES_TO_IDS: Dict[str, int] 
+  TARGET_TYPES_TO_NAMES: Dict[str, str] 
+  __commentary_validator: AbstractValidator 
+  __topk_validator: AbstractValidator 
+  __cache: ring.func.lru_cache.LruCache 
+  __model_url: str 
+}
+class serve_utils.Validators.TopKValidator {
+  topk_max: int
+  __init__(self, next_validator: Optional[AbstractValidator])
+  _validate_self(self, data: any)
+}
+class serve_utils.Validators.AbstractValidator {
+  __next_validator: Optional[AbstractValidator]
+  __init__(self, next_validator: Optional[AbstractValidator])
+  validate(self, data: any)
+  <i>_validate_self(self, data: any)</i>
+  set_next(self, next_validator: AbstractValidator)
+}
+serve_utils.Validators.AbstractValidator -> serve_utils.Validators.AbstractValidator
+serve_utils.ServeModelUtilsFacadeSingleton --up> serve_utils.Validators
+serve_utils.ServeModelUtilsFacadeSingleton --up> serve_utils.SamplingStrategies 
+serve_utils.ServeProxyUtilsFacadeSingleton --down> serve_utils.Validators 
+serve_utils.ServeProxyUtilsFacadeSingleton --down> serve_utils.SamplingStrategies 
+
+serve_utils.SamplingStrategies.AbstractSamplingStrategy <|-- serve_utils.SamplingStrategies.MultinomialSamplingStrategy
+serve_utils.SamplingStrategies.AbstractSamplingStrategy <|-- serve_utils.SamplingStrategies.TopKSamplingStrategy
+serve_utils.Validators.AbstractValidator <|-- serve_utils.Validators.BoardsValidator
+serve_utils.Validators.AbstractValidator <|-- serve_utils.Validators.JsonSchemaValidator
+serve_utils.Validators.AbstractValidator <|-- serve_utils.Validators.MaxNewTokensValidator
+serve_utils.Validators.AbstractValidator <|-- serve_utils.Validators.TargetTypeValidator
+serve_utils.Validators.AbstractValidator <|-- serve_utils.Validators.TemperatureValidator
+serve_utils.Validators.AbstractValidator <|-- serve_utils.Validators.TopKValidator
+
+@enduml

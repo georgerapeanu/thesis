@@ -1,0 +1,446 @@
+@startuml 
+left to right direction
+!pragma useIntermediatePackages false
+
+class torch.utils.data.Dataset {
+
+  __len__(self): int
+  __getitem__(self, idx): any
+}
+
+class torch.nn.Module {
+  forward(...): any 
+}
+
+class lightning.LightningModule{
+  forward(...): any 
+  training_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+  vaidation_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+  test_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+  configure_optimizers(self)
+  on_validation_end(self)
+}
+
+class lightning.Datamodule {
+  prepare_data(self) 
+  setup(self, stage: str)
+  val_dataloader(self): torch.nn.DataLoader
+  train_dataloader(self): torch.nn.DataLoader
+  test_dataloader(self): torch.nn.DataLoader
+}
+
+package data {
+  class ActualBoardCommentaryDataset.ActualBoardCommentaryDataset {
+    mate_value: int 
+    count_past_boards: int 
+    __sp: sentencepiece.SentencePieceProcessor
+    __raw_data: List[Tuple[List[str], str, List[int], torch.tensor]] 
+    __data: Tuple[torch.tensor, torch.tensor, torch.tensor, torch.tensor, torch.tensor, torch.tensor]
+
+    __init__(self, config: DictConfig, engine_config: DictConfig, sp: sentencepiece.SentencePieceProcessor)
+    <u>get_positional_features(board: chess.Board): torch.tensor</u>
+    <u>get_state_features(board: chess.Board): torch.tensor</u>
+    __len__(self): int
+    <u>raw_data_to_data(self, raw_data: List[Tuple[List[str], str, List[int], torch.tensor]]): Tuple[torch.tensor, torch.tensor, torch.tensor] </u>
+     __getitem__(self, idx): Tuple[List[str], str, List[int], torch.tensor] 
+     get_raw_data(self, idx: int): Tuple[Optional[str], str, Optional[int], int]
+    <u>get_board_token_size(): int</u>
+  }
+
+  class ActualBoardDataModule.ActualBoardDataModule {
+    raw_data_path: str
+    processed_path: str
+    artifacts_path: str
+    pickle_path: str
+    engine_config: omegaconf.DictConfig
+    train_config: omegaconf.DictConfig
+    test_config: omegaconf.DictConfig
+    val_config: omegaconf.DictConfig
+    force_recrawl: bool
+    force_reprocess: bool
+    sp: sentencepiece.SentencePieceProcessor 
+    vocab_size: int
+    train_dataset: ActualBoardCommentaryDataset.ActualBoardCommentaryDataset 
+    val_dataset: ActualBoardCommentaryDataset.ActualBoardCommentaryDataset 
+    test_dataset: ActualBoardCommentaryDataset.ActualBoardCommentaryDataset 
+    train_workers: int
+    val_workers: int
+    test_workers: int
+
+    __init__(...)
+    prepare_data(self) 
+    setup(self, stage: str)
+    get_collate_fn(self): Func
+    val_dataloader(self): torch.nn.DataLoader
+    train_dataloader(self): torch.nn.DataLoader
+    test_dataloader(self): torch.nn.DataLoader
+    <u>get_board_token_size(): int</u>
+  }
+
+  class AlphazeroCommentaryDataset.AlphazeroCommentaryDataset {
+    in_memory: bool 
+    count_past_boards: int 
+    __deltas: List[Tuple[int, int]] 
+    __inv_deltas: Dict[Tuple[int, int], int] 
+    __sp: sentencepiece.SentencePieceProcessor
+    __raw_data: List[Tuple[List[str], str, List[int], torch.tensor]] 
+    __data: Tuple[torch.tensor, torch.tensor, torch.tensor]
+   
+    __init__(self, config: DictConfig, sp: sentencepiece.SentencePieceProcessor)
+    <u>__all_move_deltas(): Tuple[List[Tuple[int, int]], Dict[Tuple[int, int], int]]</u>
+    __get_positional_features(self, board: chess.Board, evaluation: int): torch.tensor
+    __get_state_features(self, board: chess.Board): torch.tensor
+    __get_all_move_features(self, board: chess.Board): torch.tensor
+    __len__(self): int
+    raw_data_to_data(self, raw_data: List[Tuple[List[str], str, List[int], torch.tensor]]): Tuple[torch.tensor, torch.tensor, torch.tensor] 
+     __getitem__(self, idx): Tuple[torch.tensor, torch.tensor, torch.tensor]
+     get_raw_data(self, idx: int): Tuple[Optional[str], str, Optional[int], int]
+     <u>get_board_channels(count_past_boards): int</u>
+  }
+
+  class AlphazeroStyleDataModule.AlphazeroStyleDataModule {
+    raw_data_path: str
+    processed_path: str
+    artifacts_path: str
+    pickle_path: str
+    engine_config: omegaconf.DictConfig
+    train_config: omegaconf.DictConfig
+    test_config: omegaconf.DictConfig
+    val_config: omegaconf.DictConfig
+    force_recrawl: bool
+    force_reprocess: bool
+    sp: sentencepiece.SentencePieceProcessor 
+    vocab_size: int
+    train_dataset: AlphazeroCommentaryDataset 
+    val_dataset: AlphazeroCommentaryDataset 
+    test_dataset: AlphazeroCommentaryDataset 
+    train_workers: int
+    val_workers: int
+    test_workers: int
+
+    __init__(...)
+    prepare_data(self) 
+    setup(self, stage: str)
+    get_collate_fn(self): Func
+    val_dataloader(self): torch.nn.DataLoader
+    train_dataloader(self): torch.nn.DataLoader
+    test_dataloader(self): torch.nn.DataLoader
+    get_board_channels(): int
+  }
+
+  rectangle helpers {
+    package create_data_type_train_cli {
+      note "Simple cli for manually classifying commentary by type for the SVM classifiers" as N1
+    }
+
+    package extract_commentaries_for_spm {
+      class Package<<global function>> {
+        extract_spm(artifacts_path: str)
+      }
+    }
+
+    package extract_commentaries_for_svm {
+      class Package<<global function>> {
+        extract(artifacts_path: str, raw_data_path: str)
+      }
+    }
+
+    class process_raw_data.Worker {
+      __config: omegaconf.DictConfig
+      __engine: stockfish.Stockfish 
+      vectorizer: sklearn.feature_extraction.text.TfidVectorizer 
+      classifiers: List[svm.SVC] 
+
+      __evaluation_to_value(self, evaluation)
+      __init__(self, config: DictConfig)
+      __call__(self, file: str)
+    }
+
+    class process_raw_data.Package<<global functions>> {
+      init_worker(config: omegaconf.DictConfig)
+        process(file: str)
+        process_raw_data(config: omegaconf.DictConfig)
+    }
+  }
+
+  AlphazeroCommentaryDataset.AlphazeroCommentaryDataset -up-|> torch.utils.data.Dataset
+  ActualBoardCommentaryDataset.ActualBoardCommentaryDataset -up-|> torch.utils.data.Dataset
+
+  ActualBoardDataModule.ActualBoardDataModule --|> lightning.Datamodule 
+  AlphazeroStyleDataModule.AlphazeroStyleDataModule --|> lightning.Datamodule
+  
+  ActualBoardDataModule.ActualBoardDataModule -up-> ActualBoardCommentaryDataset.ActualBoardCommentaryDataset
+  AlphazeroStyleDataModule.AlphazeroStyleDataModule -up-> AlphazeroCommentaryDataset.AlphazeroCommentaryDataset
+  
+  ActualBoardDataModule.ActualBoardDataModule -> helpers 
+  AlphazeroStyleDataModule.AlphazeroStyleDataModule -> helpers
+  
+  create_data_type_train_cli --[hidden]> extract_commentaries_for_spm
+  extract_commentaries_for_spm --[hidden]> extract_commentaries_for_svm
+  extract_commentaries_for_svm --[hidden]> process_raw_data
+
+}
+  
+
+package crawler {
+  class Package<<global functions>> {
+    parse_response_text(game_string: str): polars.DataFrame
+    save_game(save_path: str, args: Tuple[str, int], skipIfExists: bool)
+    crawl(pickle_path: str, raw_data_path: str)
+  }
+}
+
+
+package model {
+  package predict {
+    class ActualBoardPredictor {
+      __sp: sentencepiece.SentencePieceProcessor
+      __context_length: int
+      
+      tokens_to_string(self, tokens: torch.tensor): str
+      predict(self, model, X_board, X_strength, X_reps, X_state, text: str, max_new_tokens: int): str
+    }
+    class AlphaZeroPredictor {
+      __sp: sentencepiece.SentencePieceProcessor
+      __context_length: int
+
+      tokens_to_string(self, tokens: torch.tensor): str
+      predict(self, model, X_board: torch.tensor, text: str, max_new_tokens: int): str
+    }
+  }
+  package commentary_models {
+    class ActualBoardTransformerModel {
+      piece_embedding: torch.tensor 
+      pe_cell_embedding: torch.tensor 
+      pe_board_embedding: torch.tensor 
+      strength_linear: torch.nn.Linear 
+      reps_linear: torch.nn.Linear 
+      state_ff: torch.nn.Sequential 
+      emb: torch.nn.Embedding
+      pe_text: model.modules.PositionalEncoding1D 
+      encoders: torch.nn.ModuleList[model.modules.TransformerEncoderBlock]
+      decoders: torch.nn.ModuleList[model.modules.TransformerDecoderBlock] 
+      linear: torch.nn.Linear 
+      context_length: int
+      eos_id: int
+      optimizer: str
+      lr: float
+      val_acc: torchmetrics.classification.Accuracy 
+      predictor: model.predict.ActualBoardPredictor 
+      to_predict: List 
+      to_predict_metadata: List 
+
+      def __init__(...)
+      forward(self, X_board: torch.tensor, X_text: torch.tensor, padding_mask: torch.tensor, targets: Optional[torch.tensor]): Tuple[torch.tensor, torch,tensor]
+      generate(self, X_board: torch.tensor, X_text: torch.tensor, max_new_tokens: int, temperature: float, do_sample:bool): torch.tensor
+      set_predictors(self, sp: sentencepiece.SentencePieceProcessor, to_predict: List, to_predict_metadata: List)
+
+      training_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      vaidation_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      test_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      configure_optimizers(self)
+      on_validation_end(self)
+    }
+    class ActualBoardTransformerMultipleHeadsModel {
+      piece_embedding: torch.tensor 
+      pe_cell_embedding: torch.tensor 
+      pe_board_embedding: torch.tensor 
+      strength_linear: torch.nn.Linear 
+      reps_linear: torch.nn.Linear 
+      state_ff: torch.nn.Sequential 
+      emb: torch.nn.Embedding
+      pe_text: model.modules.PositionalEncoding1D 
+      encoders: torch.nn.ModuleList[model.modules.TransformerEncoderBlock]
+      decoders: torch.nn.ModuleList[model.modules.TransformerDecoderBlock] 
+      target_types_and_depth: List[Tuple[int, int]] 
+      linears: torch.nn.ModuleList[torch.nn.Linear] 
+      final_linear: torch.nn.Linear 
+      context_length: int
+      eos_id: int
+      optimizer: str
+      lr: float
+      val_acc: torchmetrics.classification.Accuracy 
+      predictor: model.predict.ActualBoardPredictor 
+      to_predict: List 
+      to_predict_metadata: List 
+
+      def __init__(...)
+      forward(self, X_boards: torch.Tensor,  X_strength: torch.Tensor, X_reps: torch.Tensor, X_state: torch.Tensor, X_text: torch.Tensor, padding_mask: torch.Tensor, targets: Optional[torch.Tensor]): Tuple[torch.tensor, torch.tensor]
+      generate(self, X_board: torch.Tensor, X_strength, X_reps, X_state, X_text: torch.Tensor, max_new_tokens: int, temperature: float, do_sample:bool): torch.Tensor
+      set_predictors(self, sp: sentencepiece.SentencePieceProcessor, to_predict: List, to_predict_metadata: List)
+
+      training_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      vaidation_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      test_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      configure_optimizers(self)
+      on_validation_end(self)
+    }
+    class AlphazeroModelResidualEncoder {
+      emb: torch.nn.Embedding
+      pe_text: model.modules.PositionalEncoding1D 
+      pe_board: model.modules.PositionalEncoding2D 
+      encoders: torch.nn.ModuleList
+      decoders: torch.nn.ModuleList[model.modules.TransformerDecoderBlock] 
+      linear: torch.nn.Linear 
+      context_length: int
+      eos_id: int
+      optimizer: str
+      lr: float
+      val_acc: torchmetrics.classification.Accuracy 
+      predictor: model.predict.AlphaZeroPredictor
+      to_predict: List 
+      to_predict_metadata: List 
+
+      __init__(...)
+      forward(self, X_board: torch.tensor, X_text: torch.tensor, padding_mask: torch.tensor, targets: Optional[torch.tensor]): Tuple[torch.tensor, torch.tensor]
+      generate(self, X_board: torch.tensor, X_text: torch.tensor, max_new_tokens: int, temperature: float, do_sample:bool): torch.tensor
+      set_predictors(self, sp: sentencepiece.SentencePieceProcessor, to_predict: List, to_predict_metadata: List)
+      
+      training_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      vaidation_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      test_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      configure_optimizers(self)
+      on_validation_end(self)
+    }
+    class AlphazeroMultipleHeadsModel {
+      board_preparation: torch.nn.Sequential 
+      emb: torch.nn.Embedding
+      pe_text: model.modules.PositionalEncoding1D 
+      pe_board: model.modules.PositionalEncoding2D 
+      encoders: torch.nn.ModuleList
+      decoders: torch.nn.ModuleList[model.modules.TransformerDecoderBlock] 
+      linears: torch.nn.ModuleList[torch.nn.Linear]
+      final_linear: torch.nn.Linear 
+      eos_id: int
+      context_length: int
+      target_types_and_depth: List[Tuple[int, int]] 
+      optimizer: str
+      lr: float
+      val_acc: torchmetrics.classification.Accuracy 
+      predictor: model.predict.AlphaZeroPredictor
+      to_predict: List 
+      to_predict_metadata: List 
+
+      __init__(...)
+      forward(self, X_board: torch.tensor, X_text: torch.tensor, padding_mask: torch.tensor, targets: Optional[torch.tensor]): Tuple[torch.tensor, torch.tensor]
+      generate(self, X_board: torch.tensor, X_text: torch.tensor, max_new_tokens: int, temperature: float, do_sample:bool): torch.tensor
+      set_predictors(self, sp: sentencepiece.SentencePieceProcessor, to_predict: List, to_predict_metadata: List)
+
+      training_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      vaidation_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      test_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      configure_optimizers(self)
+      on_validation_end(self)
+    }
+    class AlphazeroTransformerModel {
+      board_preparation: torch.nn.Sequential 
+      emb: torch.nn.Embedding
+      pe_text: model.modules.PositionalEncoding1D 
+      pe_board: model.modules.PositionalEncoding2D 
+      encoders: torch.nn.ModuleList
+      decoders: torch.nn.ModuleList[model.modules.TransformerDecoderBlock] 
+      linear: torch.nn.Linear 
+      context_length: int
+      eos_id: int
+      optimizer: str
+      lr: float
+      val_acc: torchmetrics.classification.Accuracy 
+      predictor: model.predict.AlphaZeroPredictor
+      to_predict: List 
+      to_predict_metadata: List 
+
+      __init__(...)
+      forward(self, X_board: torch.tensor, X_text: torch.tensor, padding_mask: torch.tensor, targets: Optional[torch.tensor]): Tuple[torch.tensor, torch.tensor]
+      generate(self, X_board: torch.tensor, X_text: torch.tensor, max_new_tokens: int, temperature: float, do_sample:bool): torch.tensor
+      set_predictors(self, sp: sentencepiece.SentencePieceProcessor, to_predict: List, to_predict_metadata: List)
+
+      training_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      vaidation_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      test_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      configure_optimizers(self)
+      on_validation_end(self)
+    }
+  }
+  package modules {
+    class DepthwiseResidualBlock.DepthwiseResidualBlock {
+      residual_layer: torch.nn.Sequential 
+      final_step: torch.nn.Sequential 
+
+      __init__(self, in_channels: int, intermediary_channels: int)
+      def forward(self, X: torch.tensor): torch.tensor
+    }
+    class PositionalEncoding1D.PositionalEncoding1D {
+      Dropout: toch.nn.Dropout 
+
+      __init__(self, max_len: int, d_model: int)
+      def forward(self, x: torch.tensor): torch.tensor
+    }
+    class PositionalEncoding2D.PositionalEncoding2D {
+      Dropout: torch.nn.Dropout 
+
+      __init__(self, max_height: int, max_width: int, d_model: int)
+       forward(self, x: torch.tensor): torch.tensor
+    }
+
+    class ResidualBlock.ResidualBlock {
+      residual_layer: torch.nn.Sequential
+      final_step: torch.nn.Sequential
+
+      __init__(self, in_channels: int, intermediary_channels: int)
+      forward(self, X: torch.tensor): torch.tensor
+    }
+
+    class ResidualEncoder.ResidualEncoder {
+      res_layers: torch.nn.Sequential
+
+      __init__(self, block_count: int, in_channels: int, intermediary_channels: int):
+      forward(self, X: torch.tensor): torch.tensor
+    }
+
+    class TransformerDecoderBlock.TransformerDecoderBlock {
+      mha1: torch.nn.MultiheadAttention 
+      layer_norm1: torch.nn.LayerNorm 
+      mha2: torch.nn.MultiheadAttention 
+      layer_norm2: torch.nn.LayerNorm 
+      feed_forward: torch.nn.Sequential 
+      layer_norm3: torch.nn.LayerNorm 
+      dropout: torch.nn.Dropout 
+
+      __init__(self, ff_inner_channels: int, encoder_embed_dims: int, decoder_embed_dims: int, num_heads: int, max_length: int)
+      forward(self, encoder_output: torch.tensor, X: torch.tensor, pad_mask: torch.tensor): torch.tensor
+    }
+    class TransformerEncoderBlock.TransformerEncoderBlock {
+      mha: torch.nn.MultiheadAttention 
+      layer_norm1: torch.nn.LayerNorm 
+      feed_forward: torch.nn.Sequential 
+      layer_norm2: torch.nn.LayerNorm 
+      dropout: torch.nn.Dropout 
+
+      __init__(self, ff_inner_channels: int, embed_dims: int, num_heads: int)
+      forward(self, X: torch.tensor): torch.tensor
+    }
+  }
+
+  commentary_models -> modules
+  commentary_models -> predict
+}
+
+data.ActualBoardDataModule.ActualBoardDataModule -> crawler.Package
+data.AlphazeroStyleDataModule.AlphazeroStyleDataModule -> crawler.Package
+
+model.modules -|> torch.nn.Module
+model.commentary_models -|> lightning.LightningModule
+
+package main {
+  class Package<<global functions>> {
+    main(cfg: DictConfig)
+  }
+}
+
+main -> data.ActualBoardDataModule.ActualBoardDataModule
+main -> data.AlphazeroCommentaryDataset.AlphazeroCommentaryDataset
+main -> model.commentary_models
+
+@enduml
+
+

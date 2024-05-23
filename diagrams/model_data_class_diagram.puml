@@ -1,0 +1,186 @@
+@startuml 
+left to right direction
+!pragma useIntermediatePackages false
+
+class torch.utils.data.Dataset {
+
+  __len__(self): int
+  __getitem__(self, idx): any
+}
+
+class lightning.Datamodule {
+  prepare_data(self) 
+  setup(self, stage: str)
+  val_dataloader(self): torch.nn.DataLoader
+  train_dataloader(self): torch.nn.DataLoader
+  test_dataloader(self): torch.nn.DataLoader
+}
+
+package data {
+  class ActualBoardCommentaryDataset.ActualBoardCommentaryDataset {
+    mate_value: int 
+    count_past_boards: int 
+    __sp: sentencepiece.SentencePieceProcessor
+    __raw_data: List[Tuple[List[str], str, List[int], torch.tensor]] 
+    __data: Tuple[torch.tensor, torch.tensor, torch.tensor, torch.tensor, torch.tensor, torch.tensor]
+
+    __init__(self, config: DictConfig, engine_config: DictConfig, sp: sentencepiece.SentencePieceProcessor)
+    <u>get_positional_features(board: chess.Board): torch.tensor</u>
+    <u>get_state_features(board: chess.Board): torch.tensor</u>
+    __len__(self): int
+    <u>raw_data_to_data(self, raw_data: List[Tuple[List[str], str, List[int], torch.tensor]]): Tuple[torch.tensor, torch.tensor, torch.tensor] </u>
+     __getitem__(self, idx): Tuple[List[str], str, List[int], torch.tensor] 
+     get_raw_data(self, idx: int): Tuple[Optional[str], str, Optional[int], int]
+    <u>get_board_token_size(): int</u>
+  }
+
+  class ActualBoardDataModule.ActualBoardDataModule {
+    raw_data_path: str
+    processed_path: str
+    artifacts_path: str
+    pickle_path: str
+    engine_config: omegaconf.DictConfig
+    train_config: omegaconf.DictConfig
+    test_config: omegaconf.DictConfig
+    val_config: omegaconf.DictConfig
+    force_recrawl: bool
+    force_reprocess: bool
+    sp: sentencepiece.SentencePieceProcessor 
+    vocab_size: int
+    train_dataset: ActualBoardCommentaryDataset.ActualBoardCommentaryDataset 
+    val_dataset: ActualBoardCommentaryDataset.ActualBoardCommentaryDataset 
+    test_dataset: ActualBoardCommentaryDataset.ActualBoardCommentaryDataset 
+    train_workers: int
+    val_workers: int
+    test_workers: int
+
+    __init__(...)
+    prepare_data(self) 
+    setup(self, stage: str)
+    get_collate_fn(self): Func
+    val_dataloader(self): torch.nn.DataLoader
+    train_dataloader(self): torch.nn.DataLoader
+    test_dataloader(self): torch.nn.DataLoader
+    <u>get_board_token_size(): int</u>
+  }
+
+  class AlphazeroCommentaryDataset.AlphazeroCommentaryDataset {
+    in_memory: bool 
+    count_past_boards: int 
+    __deltas: List[Tuple[int, int]] 
+    __inv_deltas: Dict[Tuple[int, int], int] 
+    __sp: sentencepiece.SentencePieceProcessor
+    __raw_data: List[Tuple[List[str], str, List[int], torch.tensor]] 
+    __data: Tuple[torch.tensor, torch.tensor, torch.tensor]
+   
+    __init__(self, config: DictConfig, sp: sentencepiece.SentencePieceProcessor)
+    <u>__all_move_deltas(): Tuple[List[Tuple[int, int]], Dict[Tuple[int, int], int]]</u>
+    __get_positional_features(self, board: chess.Board, evaluation: int): torch.tensor
+    __get_state_features(self, board: chess.Board): torch.tensor
+    __get_all_move_features(self, board: chess.Board): torch.tensor
+    __len__(self): int
+    raw_data_to_data(self, raw_data: List[Tuple[List[str], str, List[int], torch.tensor]]): Tuple[torch.tensor, torch.tensor, torch.tensor] 
+     __getitem__(self, idx): Tuple[torch.tensor, torch.tensor, torch.tensor]
+     get_raw_data(self, idx: int): Tuple[Optional[str], str, Optional[int], int]
+     <u>get_board_channels(count_past_boards): int</u>
+  }
+
+  class AlphazeroStyleDataModule.AlphazeroStyleDataModule {
+    raw_data_path: str
+    processed_path: str
+    artifacts_path: str
+    pickle_path: str
+    engine_config: omegaconf.DictConfig
+    train_config: omegaconf.DictConfig
+    test_config: omegaconf.DictConfig
+    val_config: omegaconf.DictConfig
+    force_recrawl: bool
+    force_reprocess: bool
+    sp: sentencepiece.SentencePieceProcessor 
+    vocab_size: int
+    train_dataset: AlphazeroCommentaryDataset 
+    val_dataset: AlphazeroCommentaryDataset 
+    test_dataset: AlphazeroCommentaryDataset 
+    train_workers: int
+    val_workers: int
+    test_workers: int
+
+    __init__(...)
+    prepare_data(self) 
+    setup(self, stage: str)
+    get_collate_fn(self): Func
+    val_dataloader(self): torch.nn.DataLoader
+    train_dataloader(self): torch.nn.DataLoader
+    test_dataloader(self): torch.nn.DataLoader
+    get_board_channels(): int
+  }
+
+  rectangle helpers {
+    package create_data_type_train_cli {
+      note "Simple cli for manually classifying commentary by type for the SVM classifiers" as N1
+    }
+
+    package extract_commentaries_for_spm {
+      class Package<<global function>> {
+        extract_spm(artifacts_path: str)
+      }
+    }
+
+    package extract_commentaries_for_svm {
+      class Package<<global function>> {
+        extract(artifacts_path: str, raw_data_path: str)
+      }
+    }
+
+    class process_raw_data.Worker {
+      __config: omegaconf.DictConfig
+      __engine: stockfish.Stockfish 
+      vectorizer: sklearn.feature_extraction.text.TfidVectorizer 
+      classifiers: List[svm.SVC] 
+
+      __evaluation_to_value(self, evaluation)
+      __init__(self, config: DictConfig)
+      __call__(self, file: str)
+    }
+
+    class process_raw_data.Package<<global functions>> {
+      init_worker(config: omegaconf.DictConfig)
+        process(file: str)
+        process_raw_data(config: omegaconf.DictConfig)
+    }
+  }
+
+  AlphazeroCommentaryDataset.AlphazeroCommentaryDataset -up-|> torch.utils.data.Dataset
+  ActualBoardCommentaryDataset.ActualBoardCommentaryDataset -up-|> torch.utils.data.Dataset
+
+  ActualBoardDataModule.ActualBoardDataModule --|> lightning.Datamodule 
+  AlphazeroStyleDataModule.AlphazeroStyleDataModule --|> lightning.Datamodule
+  
+  ActualBoardDataModule.ActualBoardDataModule -up-> ActualBoardCommentaryDataset.ActualBoardCommentaryDataset
+  AlphazeroStyleDataModule.AlphazeroStyleDataModule -up-> AlphazeroCommentaryDataset.AlphazeroCommentaryDataset
+  
+  ActualBoardDataModule.ActualBoardDataModule -> helpers 
+  AlphazeroStyleDataModule.AlphazeroStyleDataModule -> helpers
+  
+  create_data_type_train_cli --[hidden]> extract_commentaries_for_spm
+  extract_commentaries_for_spm --[hidden]> extract_commentaries_for_svm
+  extract_commentaries_for_svm --[hidden]> process_raw_data
+
+}
+  
+
+package crawler {
+  class Package<<global functions>> {
+    parse_response_text(game_string: str): polars.DataFrame
+    save_game(save_path: str, args: Tuple[str, int], skipIfExists: bool)
+    crawl(pickle_path: str, raw_data_path: str)
+  }
+}
+
+
+data.ActualBoardDataModule.ActualBoardDataModule -> crawler.Package
+data.AlphazeroStyleDataModule.AlphazeroStyleDataModule -> crawler.Package
+
+@enduml
+
+

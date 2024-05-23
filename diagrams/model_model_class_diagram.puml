@@ -1,0 +1,257 @@
+@startuml 
+left to right direction
+!pragma useIntermediatePackages false
+
+class torch.nn.Module {
+  forward(...): any 
+}
+
+class lightning.LightningModule{
+  forward(...): any 
+  training_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+  vaidation_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+  test_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+  configure_optimizers(self)
+  on_validation_end(self)
+}
+
+package model {
+  package predict {
+    class ActualBoardPredictor {
+      __sp: sentencepiece.SentencePieceProcessor
+      __context_length: int
+      
+      tokens_to_string(self, tokens: torch.tensor): str
+      predict(self, model, X_board, X_strength, X_reps, X_state, text: str, max_new_tokens: int): str
+    }
+    class AlphaZeroPredictor {
+      __sp: sentencepiece.SentencePieceProcessor
+      __context_length: int
+
+      tokens_to_string(self, tokens: torch.tensor): str
+      predict(self, model, X_board: torch.tensor, text: str, max_new_tokens: int): str
+    }
+  }
+  package commentary_models {
+    class ActualBoardTransformerModel {
+      piece_embedding: torch.tensor 
+      pe_cell_embedding: torch.tensor 
+      pe_board_embedding: torch.tensor 
+      strength_linear: torch.nn.Linear 
+      reps_linear: torch.nn.Linear 
+      state_ff: torch.nn.Sequential 
+      emb: torch.nn.Embedding
+      pe_text: model.modules.PositionalEncoding1D 
+      encoders: torch.nn.ModuleList[model.modules.TransformerEncoderBlock]
+      decoders: torch.nn.ModuleList[model.modules.TransformerDecoderBlock] 
+      linear: torch.nn.Linear 
+      context_length: int
+      eos_id: int
+      optimizer: str
+      lr: float
+      val_acc: torchmetrics.classification.Accuracy 
+      predictor: model.predict.ActualBoardPredictor 
+      to_predict: List 
+      to_predict_metadata: List 
+
+      def __init__(...)
+      forward(self, X_board: torch.tensor, X_text: torch.tensor, padding_mask: torch.tensor, targets: Optional[torch.tensor]): Tuple[torch.tensor, torch,tensor]
+      generate(self, X_board: torch.tensor, X_text: torch.tensor, max_new_tokens: int, temperature: float, do_sample:bool): torch.tensor
+      set_predictors(self, sp: sentencepiece.SentencePieceProcessor, to_predict: List, to_predict_metadata: List)
+
+      training_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      vaidation_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      test_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      configure_optimizers(self)
+      on_validation_end(self)
+    }
+    class ActualBoardTransformerMultipleHeadsModel {
+      piece_embedding: torch.tensor 
+      pe_cell_embedding: torch.tensor 
+      pe_board_embedding: torch.tensor 
+      strength_linear: torch.nn.Linear 
+      reps_linear: torch.nn.Linear 
+      state_ff: torch.nn.Sequential 
+      emb: torch.nn.Embedding
+      pe_text: model.modules.PositionalEncoding1D 
+      encoders: torch.nn.ModuleList[model.modules.TransformerEncoderBlock]
+      decoders: torch.nn.ModuleList[model.modules.TransformerDecoderBlock] 
+      target_types_and_depth: List[Tuple[int, int]] 
+      linears: torch.nn.ModuleList[torch.nn.Linear] 
+      final_linear: torch.nn.Linear 
+      context_length: int
+      eos_id: int
+      optimizer: str
+      lr: float
+      val_acc: torchmetrics.classification.Accuracy 
+      predictor: model.predict.ActualBoardPredictor 
+      to_predict: List 
+      to_predict_metadata: List 
+
+      def __init__(...)
+      forward(self, X_boards: torch.Tensor,  X_strength: torch.Tensor, X_reps: torch.Tensor, X_state: torch.Tensor, X_text: torch.Tensor, padding_mask: torch.Tensor, targets: Optional[torch.Tensor]): Tuple[torch.tensor, torch.tensor]
+      generate(self, X_board: torch.Tensor, X_strength, X_reps, X_state, X_text: torch.Tensor, max_new_tokens: int, temperature: float, do_sample:bool): torch.Tensor
+      set_predictors(self, sp: sentencepiece.SentencePieceProcessor, to_predict: List, to_predict_metadata: List)
+
+      training_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      vaidation_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      test_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      configure_optimizers(self)
+      on_validation_end(self)
+    }
+    class AlphazeroModelResidualEncoder {
+      emb: torch.nn.Embedding
+      pe_text: model.modules.PositionalEncoding1D 
+      pe_board: model.modules.PositionalEncoding2D 
+      encoders: torch.nn.ModuleList
+      decoders: torch.nn.ModuleList[model.modules.TransformerDecoderBlock] 
+      linear: torch.nn.Linear 
+      context_length: int
+      eos_id: int
+      optimizer: str
+      lr: float
+      val_acc: torchmetrics.classification.Accuracy 
+      predictor: model.predict.AlphaZeroPredictor
+      to_predict: List 
+      to_predict_metadata: List 
+
+      __init__(...)
+      forward(self, X_board: torch.tensor, X_text: torch.tensor, padding_mask: torch.tensor, targets: Optional[torch.tensor]): Tuple[torch.tensor, torch.tensor]
+      generate(self, X_board: torch.tensor, X_text: torch.tensor, max_new_tokens: int, temperature: float, do_sample:bool): torch.tensor
+      set_predictors(self, sp: sentencepiece.SentencePieceProcessor, to_predict: List, to_predict_metadata: List)
+      
+      training_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      vaidation_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      test_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      configure_optimizers(self)
+      on_validation_end(self)
+    }
+    class AlphazeroMultipleHeadsModel {
+      board_preparation: torch.nn.Sequential 
+      emb: torch.nn.Embedding
+      pe_text: model.modules.PositionalEncoding1D 
+      pe_board: model.modules.PositionalEncoding2D 
+      encoders: torch.nn.ModuleList
+      decoders: torch.nn.ModuleList[model.modules.TransformerDecoderBlock] 
+      linears: torch.nn.ModuleList[torch.nn.Linear]
+      final_linear: torch.nn.Linear 
+      eos_id: int
+      context_length: int
+      target_types_and_depth: List[Tuple[int, int]] 
+      optimizer: str
+      lr: float
+      val_acc: torchmetrics.classification.Accuracy 
+      predictor: model.predict.AlphaZeroPredictor
+      to_predict: List 
+      to_predict_metadata: List 
+
+      __init__(...)
+      forward(self, X_board: torch.tensor, X_text: torch.tensor, padding_mask: torch.tensor, targets: Optional[torch.tensor]): Tuple[torch.tensor, torch.tensor]
+      generate(self, X_board: torch.tensor, X_text: torch.tensor, max_new_tokens: int, temperature: float, do_sample:bool): torch.tensor
+      set_predictors(self, sp: sentencepiece.SentencePieceProcessor, to_predict: List, to_predict_metadata: List)
+
+      training_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      vaidation_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      test_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      configure_optimizers(self)
+      on_validation_end(self)
+    }
+    class AlphazeroTransformerModel {
+      board_preparation: torch.nn.Sequential 
+      emb: torch.nn.Embedding
+      pe_text: model.modules.PositionalEncoding1D 
+      pe_board: model.modules.PositionalEncoding2D 
+      encoders: torch.nn.ModuleList
+      decoders: torch.nn.ModuleList[model.modules.TransformerDecoderBlock] 
+      linear: torch.nn.Linear 
+      context_length: int
+      eos_id: int
+      optimizer: str
+      lr: float
+      val_acc: torchmetrics.classification.Accuracy 
+      predictor: model.predict.AlphaZeroPredictor
+      to_predict: List 
+      to_predict_metadata: List 
+
+      __init__(...)
+      forward(self, X_board: torch.tensor, X_text: torch.tensor, padding_mask: torch.tensor, targets: Optional[torch.tensor]): Tuple[torch.tensor, torch.tensor]
+      generate(self, X_board: torch.tensor, X_text: torch.tensor, max_new_tokens: int, temperature: float, do_sample:bool): torch.tensor
+      set_predictors(self, sp: sentencepiece.SentencePieceProcessor, to_predict: List, to_predict_metadata: List)
+
+      training_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      vaidation_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      test_step(self, batch: torch.tensor, batch_idx: int): lightning.STEP_OUTPUT
+      configure_optimizers(self)
+      on_validation_end(self)
+    }
+  }
+  package modules {
+    class DepthwiseResidualBlock.DepthwiseResidualBlock {
+      residual_layer: torch.nn.Sequential 
+      final_step: torch.nn.Sequential 
+
+      __init__(self, in_channels: int, intermediary_channels: int)
+      def forward(self, X: torch.tensor): torch.tensor
+    }
+    class PositionalEncoding1D.PositionalEncoding1D {
+      Dropout: toch.nn.Dropout 
+
+      __init__(self, max_len: int, d_model: int)
+      def forward(self, x: torch.tensor): torch.tensor
+    }
+    class PositionalEncoding2D.PositionalEncoding2D {
+      Dropout: torch.nn.Dropout 
+
+      __init__(self, max_height: int, max_width: int, d_model: int)
+       forward(self, x: torch.tensor): torch.tensor
+    }
+
+    class ResidualBlock.ResidualBlock {
+      residual_layer: torch.nn.Sequential
+      final_step: torch.nn.Sequential
+
+      __init__(self, in_channels: int, intermediary_channels: int)
+      forward(self, X: torch.tensor): torch.tensor
+    }
+
+    class ResidualEncoder.ResidualEncoder {
+      res_layers: torch.nn.Sequential
+
+      __init__(self, block_count: int, in_channels: int, intermediary_channels: int):
+      forward(self, X: torch.tensor): torch.tensor
+    }
+
+    class TransformerDecoderBlock.TransformerDecoderBlock {
+      mha1: torch.nn.MultiheadAttention 
+      layer_norm1: torch.nn.LayerNorm 
+      mha2: torch.nn.MultiheadAttention 
+      layer_norm2: torch.nn.LayerNorm 
+      feed_forward: torch.nn.Sequential 
+      layer_norm3: torch.nn.LayerNorm 
+      dropout: torch.nn.Dropout 
+
+      __init__(self, ff_inner_channels: int, encoder_embed_dims: int, decoder_embed_dims: int, num_heads: int, max_length: int)
+      forward(self, encoder_output: torch.tensor, X: torch.tensor, pad_mask: torch.tensor): torch.tensor
+    }
+    class TransformerEncoderBlock.TransformerEncoderBlock {
+      mha: torch.nn.MultiheadAttention 
+      layer_norm1: torch.nn.LayerNorm 
+      feed_forward: torch.nn.Sequential 
+      layer_norm2: torch.nn.LayerNorm 
+      dropout: torch.nn.Dropout 
+
+      __init__(self, ff_inner_channels: int, embed_dims: int, num_heads: int)
+      forward(self, X: torch.tensor): torch.tensor
+    }
+  }
+
+  commentary_models -> modules
+  commentary_models -> predict
+}
+
+model.modules -|> torch.nn.Module
+model.commentary_models -|> lightning.LightningModule
+
+@enduml
+
+
