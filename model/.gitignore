@@ -3,6 +3,7 @@
 /artifacts/*
 !/artifacts/model.pt
 !/artifacts/commentary_types.parquet
+!/artifacts/commentary_*.txt
 !/artifacts/sp2000.model
 !/artifacts/sp2000.vocab*
 **/__pycache__/
