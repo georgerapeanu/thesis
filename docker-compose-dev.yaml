@@ -1,17 +1,17 @@
 services:
   prepare_step:
     extends:
-      file: ./model/docker-compose.yaml
+      file: ./model/docker-compose-dev.yaml
       service: prepare_step
 
   model:
     extends:
-      file: ./model/docker-compose.yaml
+      file: ./model/docker-compose-dev.yaml
       service: model 
 
   proxy:
     extends:
-      file: ./model/docker-compose.yaml
+      file: ./model/docker-compose-dev.yaml
       service: proxy 
 
   frontend:
@@ -23,6 +23,8 @@ services:
     depends_on:
       - model
       - proxy
+    volumes:
+      - ./nginx-dev.conf:/etc/nginx/nginx.conf
 
 volumes:
   venv:

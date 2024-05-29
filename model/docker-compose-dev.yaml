@@ -1,0 +1,22 @@
+services:
+  prepare_step:
+    extends:
+      file: ./docker-compose.yaml
+      service: prepare_step
+
+  model:
+    extends:
+      file: ./docker-compose.yaml
+      service: model 
+    ports:
+      - "8081:8080"
+
+  proxy:
+    extends:
+      file: ./docker-compose.yaml
+      service: proxy 
+    ports: 
+      - "8080:8080"
+
+volumes:
+  venv:
