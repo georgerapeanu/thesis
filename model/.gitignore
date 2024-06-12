@@ -1,4 +1,5 @@
 /processed_data/
+**/venv/**
 /raw_data/
 /artifacts/*
 !/artifacts/model.pt
