@@ -14,7 +14,7 @@ RUN npm install
 COPY . .
 
 # Build the Angular application in production mode
-RUN npm run build --dev
+RUN npm run build-dev
 
 # Create a slimmer image for serving the application
 FROM nginx:alpine
